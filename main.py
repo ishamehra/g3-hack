@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import json
 import logging
 import os
@@ -40,15 +39,30 @@ current_session_id: str | None = None
 
 
 async def stream_lyria_audio():
-    """Background task: receive PCM audio from Lyria and forward to /ws clients."""
+    """Background task: receive PCM audio from Lyria and forward to /ws clients.
+
+    Sends audio as binary WebSocket frames (raw PCM bytes) for zero overhead.
+    Falls back to base64 JSON for clients that send {"format": "base64"}.
+    Batches small chunks into ~0.25s blocks to reduce per-message overhead.
+    """
+    BATCH_TARGET = 48000  # ~0.25s of stereo 16-bit PCM (48kHz * 2ch * 2bytes * 0.25s)
+    batch_buffer = bytearray()
+
     try:
         async for chunk in lyria_manager.receive_audio():
-            audio_b64 = base64.b64encode(chunk).decode()
-            msg = json.dumps({"type": "audio", "audio": audio_b64})
+            batch_buffer.extend(chunk)
+
+            # Only send when we've accumulated enough data
+            if len(batch_buffer) < BATCH_TARGET:
+                continue
+
+            audio_bytes = bytes(batch_buffer)
+            batch_buffer.clear()
+
             disconnected: set[WebSocket] = set()
             for ws in audio_clients:
                 try:
-                    await ws.send_text(msg)
+                    await ws.send_bytes(audio_bytes)
                 except Exception:
                     disconnected.add(ws)
             audio_clients.difference_update(disconnected)

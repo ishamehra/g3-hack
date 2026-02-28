@@ -15,6 +15,7 @@ from resonance.models import (
     BiometricData,
     CompositeState,
     GeminiInterpretation,
+    LyriaParams,
     SupabaseLyriaRow,
 )
 from resonance.oura_client import OuraClient
@@ -28,6 +29,11 @@ logger = logging.getLogger(__name__)
 class SimpleLoop:
     """Async biofeedback loop without Temporal."""
 
+    # EMA smoothing alpha values (lower = smoother, slower response)
+    _ALPHA_DEFAULT = 0.3
+    _ALPHA_BPM = 0.15  # BPM changes are expensive (trigger reset_context)
+    _BPM_DEAD_ZONE = 5  # Only propagate bpm if delta > this
+
     def __init__(self, lyria_manager):
         self._lyria_manager = lyria_manager
         self._running = False
@@ -37,6 +43,7 @@ class SimpleLoop:
         self._current_state: dict = {}
         self._task: asyncio.Task | None = None
         self._oura: OuraClient | None = None
+        self._prev_params: LyriaParams | None = None
 
     @property
     def current_state(self) -> dict:
@@ -117,16 +124,58 @@ class SimpleLoop:
             except Exception as e:
                 logger.warning("Supabase upsert failed: %s", e)
 
-        # 5. Update Lyria
+        # 5. Smooth params + update Lyria
         if self._lyria_manager and self._lyria_manager.is_running():
             try:
-                await self._lyria_manager.update_params(interp.lyria_params, interp.prompts)
+                smoothed = self._smooth_params(interp.lyria_params)
+                await self._lyria_manager.update_params(smoothed, interp.prompts)
                 await self._lyria_manager.check_session_limit()
             except Exception as e:
                 logger.warning("Lyria update failed: %s", e)
 
         self._current_state = interp.model_dump()
         logger.info("Loop iteration complete: mood=%s, bpm=%d", interp.lyria_params.mood_label, interp.lyria_params.bpm)
+
+    def _smooth_params(self, new: LyriaParams) -> LyriaParams:
+        """EMA smoothing on numeric Lyria params to prevent jarring music jumps.
+
+        - density, brightness, guidance, temperature: alpha=0.3
+        - bpm: alpha=0.15 with dead zone (only change if delta > 5)
+        - scale, mood_label, instruments: discrete, no smoothing
+        """
+        prev = self._prev_params
+        if prev is None:
+            self._prev_params = new
+            return new
+
+        a = self._ALPHA_DEFAULT
+
+        smoothed_density = a * new.density + (1 - a) * prev.density
+        smoothed_brightness = a * new.brightness + (1 - a) * prev.brightness
+        smoothed_guidance = a * new.guidance + (1 - a) * prev.guidance
+        smoothed_temperature = a * new.temperature + (1 - a) * prev.temperature
+
+        # BPM: heavier smoothing + dead zone to avoid costly reset_context
+        smoothed_bpm_raw = self._ALPHA_BPM * new.bpm + (1 - self._ALPHA_BPM) * prev.bpm
+        if abs(smoothed_bpm_raw - prev.bpm) < self._BPM_DEAD_ZONE:
+            smoothed_bpm = prev.bpm
+            use_scale = prev.scale  # keep old scale too if bpm didn't change
+        else:
+            smoothed_bpm = round(smoothed_bpm_raw)
+            use_scale = new.scale
+
+        result = LyriaParams(
+            bpm=smoothed_bpm,
+            density=round(smoothed_density, 3),
+            brightness=round(smoothed_brightness, 3),
+            scale=use_scale,
+            guidance=round(smoothed_guidance, 3),
+            temperature=round(smoothed_temperature, 3),
+            mood_label=new.mood_label,
+            instruments=new.instruments,
+        )
+        self._prev_params = result
+        return result
 
     async def _poll_oura(self) -> BiometricData:
         if self._oura is None:
