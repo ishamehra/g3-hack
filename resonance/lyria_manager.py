@@ -22,6 +22,7 @@ class LyriaManager:
     def __init__(self):
         self._client: genai.Client | None = None
         self._session = None
+        self._session_ctx = None
         self._running = False
         self._current_params: LyriaParams | None = None
         self._current_prompts: list[WeightedPrompt] | None = None
@@ -38,9 +39,10 @@ class LyriaManager:
         """Start a new Lyria RealTime Music session."""
         client = self._get_client()
 
-        self._session = await client.aio.live.music.connect(
+        self._session_ctx = client.aio.live.music.connect(
             model="models/lyria-realtime-exp",
         )
+        self._session = await self._session_ctx.__aenter__()
         self._running = True
         self._session_start = asyncio.get_event_loop().time()
 
@@ -152,7 +154,14 @@ class LyriaManager:
     async def stop(self):
         """Close the session."""
         self._running = False
-        if self._session:
+        if self._session_ctx:
+            try:
+                await self._session_ctx.__aexit__(None, None, None)
+            except Exception:
+                pass
+            self._session = None
+            self._session_ctx = None
+        elif self._session:
             try:
                 await self._session.close()
             except Exception:

@@ -175,10 +175,18 @@ async def start_session(req: StartSessionRequest):
         session_id = f"local-{datetime.now().strftime('%H%M%S')}"
         current_session_id = session_id
 
-    # 2. Start Lyria streaming
+    # 2. Start Lyria streaming (non-fatal — session works without audio)
+    lyria_ok = False
     if not lyria_manager.is_running():
-        await lyria_manager.start()
-    audio_task = asyncio.create_task(stream_lyria_audio())
+        try:
+            await lyria_manager.start()
+            lyria_ok = True
+        except Exception as e:
+            logger.warning("Lyria start failed (session continues without audio): %s", e)
+    else:
+        lyria_ok = True
+    if lyria_ok:
+        audio_task = asyncio.create_task(stream_lyria_audio())
 
     # 3. Start biofeedback loop
     if USE_TEMPORAL:
