@@ -108,26 +108,46 @@ We map physiological signals onto the two-axis emotion model:
                     LOW AROUSAL
 ```
 
-#### Mapping Rules (The Black Box, Opened)
+#### Mapping Rules (The Hackathon "Heuristic" Model)
 
-This is a deterministic converter — no ML needed for hackathon scope.
+This is a deterministic converter that simulates the behavior of complex ML models using Oura's specific API endpoints, entirely avoiding the cold-start training problem.
 
+**Step 1: Z-Score Normalization**
+First, normalize the user's current data against their own historical averages.
 ```
-AROUSAL = f(heart_rate, hrv, skin_temp)
-  - heart_rate ↑ → arousal ↑
-  - hrv ↓ → arousal ↑ (sympathetic dominance)
-  - skin_temp_delta ↓ → arousal ↑ (vasoconstriction = stress)
+norm_hr = (current_hr - avg_hr) / std_hr
+norm_hrv = (current_hrv - avg_hrv) / std_hrv
+```
 
-  Formula (weighted linear combination):
-  arousal = 0.4 * norm(HR) + 0.4 * (1 - norm(HRV)) + 0.2 * (1 - norm(skin_temp))
+**Step 2: Base Valence (The "Mood" Baseline)**
+Infer the user's underlying emotional resilience for the day using their slow-moving recovery metrics.
+```
+# Higher sleep/readiness = higher valence baseline (more resilient to stress)
+base_valence = 0.5 * norm(sleep_score) + 0.5 * norm(readiness_score)
+```
 
-VALENCE = harder to infer from physiology alone
-  - For hackathon: use Oura's stress score as inverse proxy
-  - stress_high → valence_low
-  - stress_low + hrv_high → valence_high
+**Step 3: Dynamic Arousal (The Real-Time Spike)**
+Calculate real-time arousal using HR and HRV, but critically, filter out physical activity.
+```
+raw_arousal = 0.6 * norm_hr + 0.4 * (1 - norm_hrv)
 
-  Formula:
-  valence = 0.6 * (1 - norm(stress)) + 0.4 * norm(HRV)
+if oura_activity_class > 2:
+    # Heart rate spike is physical exertion, not emotional.
+    arousal = 0
+else:
+    # User is mostly still, so HR spike is psychological.
+    arousal = raw_arousal
+```
+
+**Step 4: Final Quadrant Mapping**
+```
+# High arousal penalizes valence (stress), unless base is exceptionally high
+current_valence = base_valence - (arousal * stress_penalty_weight)
+
+if current_valence > 0 and arousal > 0: quadrant = "Q1" (Excited)
+if current_valence < 0 and arousal > 0: quadrant = "Q2" (Stressed)
+if current_valence < 0 and arousal < 0: quadrant = "Q3" (Reflective/Sad)
+if current_valence > 0 and arousal < 0: quadrant = "Q4" (Calm)
 ```
 
 #### Software
