@@ -19,29 +19,46 @@ const ASCII_NUMS: Record<number, string[]> = {
   1: [" ██╗", "███║", "╚██║", " ██║", " ██║", " ╚═╝"],
 };
 
-function BpmSparkline({ history }: { history: number[] }) {
-  if (history.length < 2) return null;
-  const min = Math.min(...history);
-  const max = Math.max(...history);
-  const range = max - min || 1;
-  const w = 60;
-  const h = 24;
-  const points = history
-    .map((v, i) => {
-      const x = (i / (history.length - 1)) * w;
-      const y = h - ((v - min) / range) * (h - 4) - 2;
-      return `${x},${y}`;
-    })
-    .join(" ");
+function BpmSparkline({ bpm }: { bpm: number }) {
+  const w = 100;
+  const h = 36;
+  const baseline = h * 0.62;
+  // More beats = higher BPM visual. Map 60-200 → 3-7 spikes
+  const beats = Math.round(3 + ((Math.min(200, Math.max(60, bpm)) - 60) / 140) * 4);
+  const spacing = w / (beats + 1);
+  const peak = h * 0.8;
+
+  const segs: string[] = [`M 0,${baseline}`];
+  for (let i = 1; i <= beats; i++) {
+    const x = i * spacing;
+    // P-wave
+    segs.push(`L ${x - 6},${baseline}`);
+    segs.push(`L ${x - 5},${baseline - 3}`);
+    segs.push(`L ${x - 4},${baseline}`);
+    // Q dip
+    segs.push(`L ${x - 1.5},${baseline}`);
+    segs.push(`L ${x - 1},${baseline + 4}`);
+    // R spike
+    segs.push(`L ${x},${baseline - peak}`);
+    // S dip
+    segs.push(`L ${x + 1},${baseline + 6}`);
+    segs.push(`L ${x + 2},${baseline}`);
+    // T-wave
+    segs.push(`L ${x + 4},${baseline - 4}`);
+    segs.push(`L ${x + 6},${baseline}`);
+  }
+  segs.push(`L ${w},${baseline}`);
 
   return (
     <svg width={w} height={h} style={{ display: "block" }}>
-      <polyline
-        points={points}
+      <path
+        d={segs.join(" ")}
         fill="none"
         stroke={GREEN}
-        strokeWidth={1.5}
-        style={{ filter: `drop-shadow(0 0 3px ${GREEN})` }}
+        strokeWidth={1.8}
+        strokeLinejoin="miter"
+        strokeLinecap="square"
+        style={{ filter: `drop-shadow(0 0 6px ${GREEN})` }}
       />
     </svg>
   );
@@ -75,7 +92,6 @@ export default function SessionScreen({
   const isActive = sessionState === "active";
   const didAutoStart = useRef(false);
   const [countdown, setCountdown] = useState(3);
-  const [bpmHistory, setBpmHistory] = useState<number[]>([]);
 
   // Auto-start session on mount if not already active
   useEffect(() => {
@@ -92,15 +108,7 @@ export default function SessionScreen({
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Track music BPM history for sparkline
-  const prevBpm = useRef<number | null>(null);
-  useEffect(() => {
-    const bpm = lyriaParams?.bpm;
-    if (bpm != null && bpm !== prevBpm.current) {
-      prevBpm.current = bpm;
-      setBpmHistory((h) => [...h.slice(-19), bpm]);
-    }
-  }, [lyriaParams?.bpm]);
+
 
   const handleStart = async () => {
     setSessionState("connecting");
@@ -173,7 +181,7 @@ export default function SessionScreen({
             </pre>
           ) : (
             <div className="flex items-center gap-2">
-              <BpmSparkline history={bpmHistory} />
+              <BpmSparkline bpm={currentBpm!} />
               <div className="flex flex-col items-end">
                 <span
                   className={currentBpm == null ? "animate-pulse" : ""}

@@ -6,6 +6,7 @@ import OnboardingScreen from "@/components/screens/OnboardingScreen";
 import MoodSelectorScreen from "@/components/screens/MoodSelectorScreen";
 import SessionScreen from "@/components/screens/SessionScreen";
 import LegalScreen from "@/components/screens/LegalScreen";
+import OuraAuthScreen from "@/components/screens/OuraAuthScreen";
 
 interface ScreenContentProps {
   screen: AppScreen;
@@ -79,6 +80,9 @@ export default function ScreenContent({
           onChangeMood={() => onNavigate("mood")}
           onHome={() => onNavigate("onboarding")}
         />
+      )}
+      {activeScreen === "oura" && (
+        <OuraAuthScreen onBack={() => onNavigate("session")} />
       )}
       {activeScreen === "privacy" && (
         <LegalScreen type="privacy" onBack={() => onNavigate("onboarding")} />
