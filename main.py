@@ -131,7 +131,7 @@ app.add_middleware(
 
 class StartSessionRequest(BaseModel):
     target_mood: str = "focused"
-    genres: str = ""
+    genres: list[str] = []
     cycle_start_date: str | None = None
     cycle_length: int = 28
 
@@ -159,7 +159,7 @@ async def start_session(req: StartSessionRequest):
     """Create a Supabase session row, start Lyria, start biofeedback loop."""
     global workflow_handle, simple_loop, audio_task, current_session_id
 
-    genre_list = [g.strip() for g in req.genres.split(",") if g.strip()]
+    genre_list = [g.strip() for g in req.genres if g.strip()]
 
     # 1. Create Supabase session
     try:
