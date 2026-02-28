@@ -23,7 +23,7 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-4 md:p-8">
-      <div className="flex flex-col md:flex-row items-center md:items-stretch gap-4 md:gap-8 w-full max-w-[860px]">
+      <div className="flex flex-col md:flex-row items-center md:items-stretch gap-4 md:gap-8 max-w-[860px]">
         <CRTMonitor>
           <ScreenContent
             screen={screen}

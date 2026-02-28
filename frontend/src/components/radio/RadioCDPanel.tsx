@@ -24,9 +24,9 @@ export default function RadioCDPanel({
     <div
       className="
         flex items-center justify-between gap-4
-        w-full
+        w-[90vw] max-w-[320px]
         md:flex-col md:items-center md:justify-between md:self-stretch
-        md:w-[220px]
+        md:w-[220px] md:max-w-none
       "
       style={{
         padding: "16px 20px",
