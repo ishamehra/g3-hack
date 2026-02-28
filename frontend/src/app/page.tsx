@@ -117,36 +117,50 @@ export default function Home() {
         />
       </div>
 
-      {/* Footer links */}
-      <div className="mt-3 flex gap-4 text-center">
-        {isLegalScreen ? (
-          <button
-            onClick={() => goTo("onboarding")}
-            className="opacity-50 hover:opacity-100 transition-opacity"
-            style={{
-              fontFamily: "var(--font-vt323)",
-              fontSize: 13,
-              color: "#ffb000",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            {"<"} RETURN HOME
-          </button>
+      {/* Footer links — triangle navigation */}
+      <div className="mt-3 flex gap-4 text-center items-center">
+        {screen === "privacy" ? (
+          <>
+            <button
+              onClick={() => goTo("onboarding")}
+              className="opacity-50 hover:opacity-100 transition-opacity"
+              style={{ fontFamily: "var(--font-vt323)", fontSize: 13, color: "#ffb000", background: "none", border: "none", cursor: "pointer" }}
+            >
+              {"<"} RETURN HOME
+            </button>
+            <span style={{ color: "#1a8a1a", fontSize: 13 }}>|</span>
+            <button
+              onClick={() => goTo("tos")}
+              className="opacity-30 hover:opacity-70 transition-opacity"
+              style={{ fontFamily: "var(--font-vt323)", fontSize: 13, color: "#33ff33", background: "none", border: "none", cursor: "pointer" }}
+            >
+              TERMS OF SERVICE
+            </button>
+          </>
+        ) : screen === "tos" ? (
+          <>
+            <button
+              onClick={() => goTo("onboarding")}
+              className="opacity-50 hover:opacity-100 transition-opacity"
+              style={{ fontFamily: "var(--font-vt323)", fontSize: 13, color: "#ffb000", background: "none", border: "none", cursor: "pointer" }}
+            >
+              {"<"} RETURN HOME
+            </button>
+            <span style={{ color: "#1a8a1a", fontSize: 13 }}>|</span>
+            <button
+              onClick={() => goTo("privacy")}
+              className="opacity-30 hover:opacity-70 transition-opacity"
+              style={{ fontFamily: "var(--font-vt323)", fontSize: 13, color: "#33ff33", background: "none", border: "none", cursor: "pointer" }}
+            >
+              PRIVACY POLICY
+            </button>
+          </>
         ) : (
           <>
             <button
               onClick={() => goTo("privacy")}
               className="opacity-30 hover:opacity-70 transition-opacity"
-              style={{
-                fontFamily: "var(--font-vt323)",
-                fontSize: 13,
-                color: "#33ff33",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-              }}
+              style={{ fontFamily: "var(--font-vt323)", fontSize: 13, color: "#33ff33", background: "none", border: "none", cursor: "pointer" }}
             >
               PRIVACY POLICY
             </button>
@@ -154,14 +168,7 @@ export default function Home() {
             <button
               onClick={() => goTo("tos")}
               className="opacity-30 hover:opacity-70 transition-opacity"
-              style={{
-                fontFamily: "var(--font-vt323)",
-                fontSize: 13,
-                color: "#33ff33",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-              }}
+              style={{ fontFamily: "var(--font-vt323)", fontSize: 13, color: "#33ff33", background: "none", border: "none", cursor: "pointer" }}
             >
               TERMS OF SERVICE
             </button>

@@ -6,6 +6,7 @@ import { textGreen, textAmber, GREEN, GREEN_DIM } from "@/lib/crt-styles";
 interface LegalScreenProps {
   type: "privacy" | "tos";
   onBack: () => void;
+  hideBackButton?: boolean;
 }
 
 interface Section {
@@ -50,7 +51,7 @@ const TOS_SECTIONS: Section[] = [
   },
 ];
 
-export default function LegalScreen({ type, onBack }: LegalScreenProps) {
+export default function LegalScreen({ type, onBack, hideBackButton }: LegalScreenProps) {
   const sections = type === "privacy" ? PRIVACY_SECTIONS : TOS_SECTIONS;
   const title = type === "privacy" ? "PRIVACY POLICY" : "TERMS OF SERVICE";
 
@@ -105,7 +106,7 @@ export default function LegalScreen({ type, onBack }: LegalScreenProps) {
         )}
       </div>
 
-      {done && (
+      {done && !hideBackButton && (
         <div className="pt-3" style={{ borderTop: `1px solid ${GREEN_DIM}` }}>
           <button
             onClick={onBack}

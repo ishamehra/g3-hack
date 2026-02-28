@@ -99,7 +99,7 @@ export default function OnboardingScreen({
             style={btnAmber}
             className="opacity-70 hover:opacity-100 transition-opacity"
           >
-            {">"} BYPASS (USE CACHED DATA)
+            {">"} CONTINUE
           </button>
         </div>
       )}
