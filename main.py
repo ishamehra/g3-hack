@@ -8,9 +8,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import httpx
 
 from resonance.lyria_manager import LyriaManager
 from resonance.models import SessionInput
@@ -24,6 +26,11 @@ logger = logging.getLogger("resonance")
 # ── Mode detection ────────────────────────────────────────────────────
 # If TEMPORAL_ADDRESS is set, use Temporal. Otherwise, use SimpleLoop.
 USE_TEMPORAL = bool(os.environ.get("TEMPORAL_ADDRESS"))
+
+OURA_CLIENT_ID = os.environ.get("OURA_CLIENT_ID", "")
+OURA_CLIENT_SECRET = os.environ.get("OURA_CLIENT_SECRET", "")
+OURA_REDIRECT_URI = os.environ.get("OURA_REDIRECT_URI", "http://localhost:8000/api/auth/callback/oura")
+
 
 # ── Global state ─────────────────────────────────────────────────────
 
@@ -298,6 +305,61 @@ async def get_state():
     if simple_loop:
         return simple_loop.current_state
     return {}
+
+
+# ── Oura OAuth & Webhooks ────────────────────────────────────────────
+
+@app.get("/api/auth/oura")
+def oura_auth_redirect():
+    """Redirect user to Oura OAuth login."""
+    if not OURA_CLIENT_ID:
+        return {"error": "OURA_CLIENT_ID not configured"}
+    url = (
+        "https://cloud.ouraring.com/oauth/authorize"
+        "?response_type=code"
+        f"&client_id={OURA_CLIENT_ID}"
+        f"&redirect_uri={OURA_REDIRECT_URI}"
+        "&state=hackathon"
+    )
+    return RedirectResponse(url)
+
+
+@app.get("/api/auth/callback/oura")
+async def oura_auth_callback(code: str, state: str | None = None):
+    """Receive OAuth code and exchange for Access Token."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.post("https://api.ouraring.com/oauth/token", data={
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": OURA_REDIRECT_URI,
+            "client_id": OURA_CLIENT_ID,
+            "client_secret": OURA_CLIENT_SECRET
+        })
+        data = resp.json()
+        if "access_token" in data:
+            os.environ["OURA_TOKEN"] = data["access_token"]
+            logger.info("Successfully obtained Oura Access Token via OAuth")
+            return {"status": "success", "message": "Oura connected! You can close this window."}
+        return {"error": "Failed to exchange token", "details": data}
+
+
+@app.post("/api/webhooks/oura")
+async def oura_webhook(request: Request):
+    """Handle incoming Oura Webhooks (e.g. sleep/readiness updates)."""
+    try:
+        data = await request.json()
+        logger.info(f"Received Oura webhook event: {data}")
+        # Here we would update the simple_loop or temporal workflow with the new biometric data
+        
+        # Verify webhook challenge
+        if "challenge" in data:
+            return {"challenge": data["challenge"]}
+            
+        return {"status": "received"}
+    except Exception as e:
+        logger.error(f"Webhook processing error: {e}")
+        return {"status": "error"}
+
 
 
 @app.post("/api/mood")

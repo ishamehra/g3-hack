@@ -61,7 +61,7 @@ class SimpleLoop:
 
     def stop(self):
         self._running = False
-        if self._task:
+        if self._task is not None:
             self._task.cancel()
             self._task = None
 
@@ -178,9 +178,15 @@ class SimpleLoop:
         return result
 
     async def _poll_oura(self) -> BiometricData:
-        if self._oura is None:
-            token = os.environ.get("OURA_TOKEN", "")
-            self._oura = OuraClient(token)
+        current_token = os.environ.get("OURA_TOKEN", "")
+        if not current_token:
+            logger.warning("OURA_TOKEN not set yet. Waiting for user to authenticate.")
+            return BiometricData()
+            
+        # Recreate client if token changed (e.g. from OAuth flow)
+        if self._oura is None or not hasattr(self._oura, "_token") or self._oura._token != current_token:
+            self._oura = OuraClient(current_token)
+            self._oura._token = current_token  # monkey patch to track it
         try:
             return await self._oura.get_current_biometrics()
         except Exception as e:
