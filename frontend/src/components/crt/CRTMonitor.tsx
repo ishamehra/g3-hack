@@ -2,11 +2,18 @@
 
 import CRTScreenOverlay from "./CRTScreenOverlay";
 
-interface CRTMonitorProps {
-  children: React.ReactNode;
+interface ToggleSwitch {
+  label: string;
+  on: boolean;
+  onToggle: () => void;
 }
 
-export default function CRTMonitor({ children }: CRTMonitorProps) {
+interface CRTMonitorProps {
+  children: React.ReactNode;
+  toggles?: ToggleSwitch[];
+}
+
+export default function CRTMonitor({ children, toggles }: CRTMonitorProps) {
   return (
     <div
       className="relative flex flex-col w-full md:w-auto"
@@ -40,25 +47,80 @@ export default function CRTMonitor({ children }: CRTMonitorProps) {
       </div>
 
       {/* Base / chin */}
-      <div className="flex items-center justify-between px-4 md:px-6 py-2 md:py-3">
+      <div className="flex items-center justify-center gap-4 md:gap-6 px-4 md:px-6 py-2 md:py-3">
+        {/* Power LED */}
         <div
-          className="w-2 h-2 rounded-full animate-pulse"
+          className="w-2 h-2 rounded-full animate-pulse shrink-0"
           style={{
             background: "#33ff33",
             boxShadow: "0 0 6px #33ff33, 0 0 12px rgba(51,255,51,0.4)",
           }}
         />
+
+        {/* Toggle switches — left side */}
+        {toggles?.map(({ label, on, onToggle }) => (
+          <button
+            key={label}
+            onClick={onToggle}
+            className="flex items-center gap-[6px] shrink-0"
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          >
+            <span
+              style={{
+                fontFamily: "var(--font-press-start)",
+                fontSize: 8,
+                color: on ? "#ffb000" : "#444",
+                textShadow: on ? "0 0 6px rgba(255,176,0,0.4)" : "none",
+                transition: "color 0.2s",
+              }}
+            >
+              {label}
+            </span>
+            <div
+              style={{
+                width: 30,
+                height: 16,
+                borderRadius: 4,
+                background: "linear-gradient(180deg, #1a1a1a, #111)",
+                border: "1px solid #333",
+                boxShadow: "inset 0 1px 3px rgba(0,0,0,0.6)",
+                position: "relative",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: 2,
+                  left: on ? 14 : 2,
+                  width: 12,
+                  height: 10,
+                  borderRadius: 3,
+                  background: on
+                    ? "linear-gradient(180deg, #c0a060, #8a6a30)"
+                    : "linear-gradient(180deg, #555, #333)",
+                  border: `1px solid ${on ? "#9a7a40" : "#444"}`,
+                  boxShadow: on
+                    ? "0 0 4px rgba(255,176,0,0.2), inset 0 1px 1px rgba(255,255,255,0.2)"
+                    : "inset 0 1px 1px rgba(255,255,255,0.1)",
+                  transition: "left 0.12s ease, background 0.2s",
+                }}
+              />
+            </div>
+          </button>
+        ))}
+
+        {/* RESONANCE — centered */}
         <span
-          className="text-[8px] md:text-[10px] tracking-[3px]"
+          className="tracking-[3px]"
           style={{
             fontFamily: "var(--font-press-start)",
+            fontSize: 8,
             color: "#ffb000",
             textShadow: "0 0 8px rgba(255,176,0,0.4)",
           }}
         >
           RESONANCE
         </span>
-        <div className="w-2" />
       </div>
     </div>
   );

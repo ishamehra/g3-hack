@@ -6,36 +6,40 @@ import { config } from "@/lib/config";
 
 interface OnboardingScreenProps {
   onContinue: () => void;
+  ouraConnected: boolean;
 }
-
-const BOOT_LINES = [
-  "RESONANCE v1.0",
-  "========================",
-  "",
-  "INITIALIZING SYSTEM...",
-  "AUDIO ENGINE.......... OK",
-  "LYRIA DECODER......... OK",
-  "BIOMETRIC LINK........ STANDBY",
-  "OURA RING............. SEARCHING",
-  "SIGNAL NORMALIZER..... OK",
-  "GEMINI INTERPRETER.... READY",
-  "",
-  "ALL SYSTEMS NOMINAL",
-];
 
 export default function OnboardingScreen({
   onContinue,
+  ouraConnected,
 }: OnboardingScreenProps) {
+  const BOOT_LINES = [
+    "RESONANCE v1.0",
+    "========================",
+    "",
+    "INITIALIZING SYSTEM...",
+    "AUDIO ENGINE.......... OK",
+    "LYRIA DECODER......... OK",
+    "BIOMETRIC LINK........ STANDBY",
+    ouraConnected
+      ? "OURA RING............. CONNECTED"
+      : "OURA RING............. SEARCHING",
+    "SIGNAL NORMALIZER..... OK",
+    "GEMINI INTERPRETER.... READY",
+    "",
+    "ALL SYSTEMS NOMINAL",
+  ];
+
   const [visibleLines, setVisibleLines] = useState(0);
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    // Check if we just came back from successful OAuth
+    // Check if we just came back from successful OAuth — skip boot animation
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("oura") === "success") {
       setShowPrompt(true);
       setVisibleLines(BOOT_LINES.length);
-      window.history.replaceState({}, '', window.location.pathname);
+      window.history.replaceState({}, "", window.location.pathname);
       return;
     }
 
@@ -49,7 +53,7 @@ export default function OnboardingScreen({
       const timer = setTimeout(() => setShowPrompt(true), 300);
       return () => clearTimeout(timer);
     }
-  }, [visibleLines]);
+  }, [visibleLines, BOOT_LINES.length]);
 
   const handleOuraLogin = () => {
     window.location.href = `${config.apiUrl}/api/auth/oura`;
@@ -62,15 +66,19 @@ export default function OnboardingScreen({
           const isTitle = i === 0;
           const isSeparator = line.startsWith("=");
           const isNominal = line === "ALL SYSTEMS NOMINAL";
+          const isOuraConnected =
+            line.includes("OURA RING") && line.includes("CONNECTED");
 
           return (
             <div
               key={i}
-              className={`text-base ${isTitle ? "mb-1" : ""} ${isNominal ? "font-bold" : ""}`}
+              className={`text-lg ${isTitle ? "mb-1" : ""} ${isNominal ? "font-bold" : ""}`}
               style={
                 isTitle || isSeparator
-                  ? { ...textAmber, fontSize: isTitle ? 16 : 13 }
-                  : textGreen
+                  ? { ...textAmber, fontSize: isTitle ? 18 : 14 }
+                  : isOuraConnected
+                    ? { ...textGreen, color: GREEN }
+                    : textGreen
               }
             >
               {line || "\u00A0"}
@@ -91,16 +99,14 @@ export default function OnboardingScreen({
       </div>
 
       {showPrompt && (
-        <div className="mt-auto pt-2 flex flex-col md:flex-row gap-2">
-          <button onClick={handleOuraLogin} style={btnAmber} className="md:flex-1">
-            {">"} CONNECT OURA RING
-          </button>
-          <button
-            onClick={onContinue}
-            style={btnAmber}
-            className="md:flex-1 opacity-70 hover:opacity-100 transition-opacity"
-          >
-            {">"} CONTINUE
+        <div className="mt-auto pt-4 flex flex-col md:flex-row gap-2">
+          {!ouraConnected && (
+            <button onClick={handleOuraLogin} style={btnAmber} className="md:flex-1">
+              {">"} CONNECT OURA RING
+            </button>
+          )}
+          <button onClick={onContinue} style={btnAmber} className="md:flex-1">
+            {">"} POWER ON
           </button>
         </div>
       )}

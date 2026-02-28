@@ -106,7 +106,7 @@ export default function VolumeKnob({ volume, onChange }: VolumeKnobProps) {
           color: "#666",
         }}
       >
-        VOL
+        VOL {String(Math.round(volume * 100)).padStart(3, "0")}
       </span>
     </div>
   );
