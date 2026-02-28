@@ -206,3 +206,4 @@ Key interpretation rules:
 - [ ] Frontend receives audio: /ws → decode PCM → Web Audio API playback
 - [ ] Mood signal: POST /api/mood → workflow picks up → Gemini → Supabase → music shifts
 - [ ] End-to-end: full loop within one 30s iteration
+   

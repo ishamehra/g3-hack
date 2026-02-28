@@ -174,47 +174,111 @@ def _parse_response(data: dict) -> GeminiInterpretation:
 
 
 # ── Deterministic fallback (Gemini offline) ──────────────────────────
+# Based on Isha's 4-stage interpreter pipeline with z-score normalization,
+# activity-aware arousal, stress penalties, and genre personalization.
 
-MOOD_VALENCE = {
-    "focused": 0.6,
-    "energized": 0.7,
-    "relaxed": 0.8,
-    "calm": 0.8,
-    "happy": 0.9,
-    "sad": 0.2,
-    "anxious": 0.2,
-    "sleepy": 0.5,
+from resonance.genre_profiles import blend_genre_profiles
+from resonance.state_compositor import infer_emotional_state
+
+# Target mood → target quadrant mapping
+MOOD_TARGET_QUADRANT = {
+    "focused": "Q4",
+    "energized": "Q1",
+    "relaxed": "Q4",
+    "calm": "Q4",
+    "happy": "Q1",
+    "sad": "Q3",
+    "anxious": "Q4",  # redirect away from Q2
+    "sleepy": "Q4",
+    "reflective": "Q3",
+    "creative": "Q1",
+}
+
+# Quadrant → default Lyria params
+QUADRANT_DEFAULTS = {
+    "Q1": {"bpm": 125, "density": 0.7, "brightness": 0.7, "scale": "G_MAJOR_E_MINOR", "instruments": ["bright_piano", "synth", "driving_drums"]},
+    "Q2": {"bpm": 90, "density": 0.4, "brightness": 0.4, "scale": "E_FLAT_MAJOR_C_MINOR", "instruments": ["piano", "strings"]},
+    "Q3": {"bpm": 70, "density": 0.3, "brightness": 0.3, "scale": "A_FLAT_MAJOR_F_MINOR", "instruments": ["solo_piano", "strings", "ambient_pad"]},
+    "Q4": {"bpm": 72, "density": 0.3, "brightness": 0.35, "scale": "C_MAJOR_A_MINOR", "instruments": ["warm_piano", "soft_strings", "ambient_pad"]},
+}
+
+# Scale mapping: preferred_scale string → Lyria enum
+SCALE_MAP = {
+    "major": "C_MAJOR_A_MINOR",
+    "minor": "A_FLAT_MAJOR_F_MINOR",
+}
+
+# Mood labels by quadrant
+QUADRANT_MOOD_LABELS = {
+    "Q1": "Energized",
+    "Q2": "Tense",
+    "Q3": "Reflective",
+    "Q4": "Calm Focus",
 }
 
 
 def fallback_interpretation(state: CompositeState) -> GeminiInterpretation:
-    """Deterministic Russell's Circumplex mapping when Gemini is unavailable."""
-    hr = state.biometrics.hr or 72
-    arousal = min(1.0, max(0.0, (hr - 50) / 70))
-    valence = MOOD_VALENCE.get(state.target_mood, 0.5)
+    """Deterministic interpreter when Gemini is unavailable.
 
-    bpm = int(60 + arousal * 100)
-    density = round(arousal * 0.6 + 0.2, 2)
-    brightness = round(valence * 0.6 + 0.2, 2)
-    scale = "C_MAJOR_A_MINOR" if valence > 0.5 else "A_FLAT_MAJOR_F_MINOR"
+    Implements Isha's full pipeline:
+      Stage 1: Z-score normalization against baselines
+      Stage 2: Activity-aware arousal + stress-penalized valence
+      Stage 2.5: Genre personalization with averaging + softening
+      Stage 3: Target quadrant → Lyria params with genre overrides
+      Stage 4: Weighted prompt construction
+    """
+    # Stage 1 + 2: Infer emotional state from biometrics
+    emotion = infer_emotional_state(state.biometrics)
+    valence = emotion["valence"]
+    arousal = emotion["arousal"]
+    quadrant = emotion["quadrant"]
+    label = emotion["label"]
 
-    if valence >= 0.5 and arousal >= 0.5:
-        quadrant, label, mood_label = "Q1", "energized", "Energized"
-    elif valence < 0.5 and arousal >= 0.5:
-        quadrant, label, mood_label = "Q2", "tense", "Tense"
-    elif valence < 0.5 and arousal < 0.5:
-        quadrant, label, mood_label = "Q3", "melancholic", "Melancholic"
+    # Determine target quadrant from mood
+    target_q = MOOD_TARGET_QUADRANT.get(state.target_mood, "Q4")
+    defaults = QUADRANT_DEFAULTS.get(target_q, QUADRANT_DEFAULTS["Q4"])
+
+    # Stage 2.5: Genre personalization
+    blended = None
+    if state.genre_preferences:
+        blended = blend_genre_profiles(state.genre_preferences, target_q)
+
+    # Stage 3: Build Lyria params (genre overrides > quadrant defaults)
+    if blended:
+        bpm = blended["bpm"]
+        density = blended["density"]
+        brightness = blended["brightness"]
+        scale = SCALE_MAP.get(blended["preferred_scale"], defaults["scale"])
+        instruments = [k.replace("_", " ") for k in blended["prompt_keywords"][:4]]
     else:
-        quadrant, label, mood_label = "Q4", "serene", "Serene"
+        bpm = defaults["bpm"]
+        density = defaults["density"]
+        brightness = defaults["brightness"]
+        scale = defaults["scale"]
+        instruments = defaults["instruments"]
+
+    mood_label = QUADRANT_MOOD_LABELS.get(target_q, "Neutral")
+
+    # Stage 4: Build weighted prompts
+    prompts = [WeightedPrompt(text=f"{state.target_mood} instrumental music", weight=0.8)]
+    if state.genre_preferences:
+        genre_str = " and ".join(state.genre_preferences[:3])
+        prompts.append(WeightedPrompt(text=f"in the style of {genre_str}", weight=0.6))
+
+    # Narration
+    hr_str = f"HR {state.biometrics.hr}bpm" if state.biometrics.hr else "HR unknown"
+    phase_str = f", {state.circadian_phase.replace('_', ' ')}" if state.circadian_phase else ""
+    cycle_str = f", {state.cycle_phase} phase" if state.cycle_phase else ""
+    narration = f"Based on your biometrics ({hr_str}{phase_str}{cycle_str}), generating {mood_label.lower()} music. (AI offline fallback)"
 
     return GeminiInterpretation(
         lyria_params=LyriaParams(
             bpm=bpm, density=density, brightness=brightness,
             scale=scale, guidance=3.0, temperature=1.1,
-            mood_label=mood_label, instruments=["piano", "ambient_pad"],
+            mood_label=mood_label, instruments=instruments,
         ),
-        prompts=[WeightedPrompt(text=f"{state.target_mood} instrumental music", weight=0.8)],
-        narration="Music generated from biometric data (AI offline).",
+        prompts=prompts,
+        narration=narration,
         emotional_state=EmotionalState(
             valence=valence, arousal=arousal, quadrant=quadrant, label=label,
         ),
