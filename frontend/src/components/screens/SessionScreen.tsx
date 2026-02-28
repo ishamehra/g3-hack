@@ -1,8 +1,8 @@
 "use client";
 
-import type { MoodState } from "@/types";
-import type { LyriaEngineHandle } from "@/components/session/LyriaEngine";
-import type { TrackInfo } from "@/lib/lyria/LyriaAudioPlayer";
+import { useState } from "react";
+import type { MoodState, LyriaParamsRow, SessionState } from "@/types";
+import { config } from "@/lib/config";
 import {
   textGreen,
   textAmber,
@@ -15,82 +15,72 @@ import {
 
 interface SessionScreenProps {
   targetMood: MoodState | null;
-  playerState: string;
-  engineRef: React.RefObject<LyriaEngineHandle | null>;
-  currentTrack: TrackInfo | null;
+  sessionId: string | null;
+  onSessionStart: (id: string) => void;
+  onSessionEnd: () => void;
+  lyriaParams: LyriaParamsRow | null;
+  audioConnected: boolean;
   onChangeMood: () => void;
   onHome: () => void;
 }
 
-function generateTestToneURL(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const sampleRate = 44100;
-    const duration = 10;
-    const numSamples = sampleRate * duration;
-    const buffer = new ArrayBuffer(44 + numSamples * 2);
-    const view = new DataView(buffer);
-    const writeStr = (offset: number, str: string) => {
-      for (let i = 0; i < str.length; i++)
-        view.setUint8(offset + i, str.charCodeAt(i));
-    };
-    writeStr(0, "RIFF");
-    view.setUint32(4, 36 + numSamples * 2, true);
-    writeStr(8, "WAVE");
-    writeStr(12, "fmt ");
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeStr(36, "data");
-    view.setUint32(40, numSamples * 2, true);
-    for (let i = 0; i < numSamples; i++) {
-      const t = i / sampleRate;
-      const envelope = Math.min(1, t * 4) * Math.min(1, (duration - t) * 4);
-      const sample = Math.sin(2 * Math.PI * 432 * t) * 0.25 * envelope;
-      view.setInt16(44 + i * 2, sample * 32767, true);
-    }
-    const blob = new Blob([buffer], { type: "audio/wav" });
-    return URL.createObjectURL(blob);
-  } catch {
-    return null;
-  }
-}
-
 export default function SessionScreen({
   targetMood,
-  playerState,
-  engineRef,
-  currentTrack,
+  sessionId,
+  onSessionStart,
+  onSessionEnd,
+  lyriaParams,
+  audioConnected,
   onChangeMood,
   onHome,
 }: SessionScreenProps) {
-  const isPlaying =
-    playerState === "playing" || playerState === "crossfading";
+  const [sessionState, setSessionState] = useState<SessionState>("idle");
 
-  const handlePlay = () => {
-    const url = generateTestToneURL();
-    if (!url) return;
-    engineRef.current?.play({
-      audio_url: url,
-      params: {
-        tempo_bpm: 80,
-        mode: "major",
-        key: "C",
-        harmonic_complexity: 0.3,
-        brightness: 0.4,
-        dynamic_range: 0.4,
-        rhythmic_density: 0.3,
-        instrumentation: ["piano", "soft_strings"],
-        duration_seconds: 10,
-        bridging: false,
-      },
-      track_number: 1,
-    });
+  const isActive = sessionState === "active";
+
+  const handleStart = async () => {
+    setSessionState("connecting");
+    try {
+      const res = await fetch(`${config.apiUrl}/api/session/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          target_mood: targetMood?.label ?? "calm",
+          genres: ["ambient", "classical"],
+        }),
+      });
+      const data = await res.json();
+      onSessionStart(data.session_id);
+      setSessionState("active");
+    } catch {
+      setSessionState("error");
+    }
   };
+
+  const handleStop = async () => {
+    try {
+      await fetch(`${config.apiUrl}/api/session/stop`, { method: "POST" });
+    } catch {
+      // ignore stop errors
+    }
+    onSessionEnd();
+    setSessionState("idle");
+  };
+
+  const handleChangeMood = async (mood: string) => {
+    try {
+      await fetch(`${config.apiUrl}/api/mood?mood=${encodeURIComponent(mood)}`, {
+        method: "POST",
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  const bio = lyriaParams?.biometrics;
+  const hr = bio?.hr != null ? String(bio.hr).padStart(3, "0") : "---";
+  const hrv = bio?.hrv != null ? String(bio.hrv).padStart(3, "0") : "---";
+  const stressPct = bio?.stress_pct != null ? `${Math.round(bio.stress_pct)}%` : "---";
 
   return (
     <div className="flex flex-col h-full">
@@ -98,24 +88,20 @@ export default function SessionScreen({
         NOW PLAYING
       </h2>
 
-      {currentTrack ? (
+      {lyriaParams ? (
         <div className="text-lg space-y-1 mb-3" style={textGreen}>
+          <div>MOOD: {lyriaParams.mood_label.toUpperCase()}</div>
           <div>
-            TRACK {String(currentTrack.track_number).padStart(2, "0")}
+            INSTRUMENTS: {lyriaParams.instruments.join(", ").toUpperCase()}
           </div>
           <div>
-            GENRE:{" "}
-            {currentTrack.params.instrumentation.join(", ").toUpperCase()}
-          </div>
-          <div>
-            TEMPO: {currentTrack.params.tempo_bpm} BPM | KEY:{" "}
-            {currentTrack.params.key}{" "}
-            {currentTrack.params.mode.toUpperCase()}
+            TEMPO: {lyriaParams.bpm} BPM | SCALE:{" "}
+            {lyriaParams.scale.replace(/_/g, " ")}
           </div>
         </div>
       ) : (
         <div className="text-lg mb-3" style={textDim}>
-          NO TRACK LOADED
+          {sessionState === "connecting" ? "CONNECTING..." : "NO STREAM"}
         </div>
       )}
 
@@ -130,60 +116,64 @@ export default function SessionScreen({
         </div>
         <div>
           STATUS:{" "}
-          {playerState === "playing"
-            ? "GENERATING..."
-            : playerState === "loading"
-              ? "LOADING..."
-              : playerState === "paused"
-                ? "PAUSED"
-                : "IDLE"}
+          {sessionState === "active" && audioConnected
+            ? "STREAMING..."
+            : sessionState === "active"
+              ? "WAITING FOR AUDIO..."
+              : sessionState === "connecting"
+                ? "CONNECTING..."
+                : sessionState === "error"
+                  ? "ERROR"
+                  : "IDLE"}
         </div>
       </div>
 
-      {isPlaying && (
+      {lyriaParams?.narration && (
+        <div
+          className="text-xs mb-3 leading-relaxed"
+          style={{ ...textDim, fontFamily: "var(--font-vt323)" }}
+        >
+          {lyriaParams.narration}
+        </div>
+      )}
+
+      {isActive && audioConnected && (
         <div className="text-lg mb-3" style={textGreen}>
-          [<span style={{ color: GREEN }}>{"█".repeat(6)}{"░".repeat(4)}</span>
-          ] 60%
+          [
+          <span style={{ color: GREEN }}>
+            {"█".repeat(8)}
+            {"░".repeat(2)}
+          </span>
+          ] LIVE
         </div>
       )}
 
       <div style={separator} />
 
       <div className="text-base space-y-1 mb-3" style={textGreen}>
-        <div>HR: 072 | HRV: 074 | STRESS: NORMAL</div>
+        <div>
+          HR: {hr} | HRV: {hrv} | STRESS: {stressPct}
+        </div>
       </div>
 
       <div className="mt-auto flex gap-3 flex-wrap">
-        {!isPlaying && playerState !== "paused" && (
-          <button onClick={handlePlay} style={btnGreen}>
-            {">"} PLAY
+        {sessionState === "idle" || sessionState === "error" ? (
+          <button onClick={handleStart} style={btnGreen}>
+            {">"} START
           </button>
-        )}
-        {isPlaying && (
-          <button
-            onClick={() => engineRef.current?.pause()}
-            style={btnGreen}
-          >
-            || PAUSE
-          </button>
-        )}
-        {playerState === "paused" && (
-          <button
-            onClick={() => engineRef.current?.resume()}
-            style={btnGreen}
-          >
-            {">"} RESUME
-          </button>
-        )}
-        {(isPlaying || playerState === "paused") && (
-          <button
-            onClick={() => engineRef.current?.stop()}
-            style={btnGreen}
-          >
+        ) : null}
+        {isActive && (
+          <button onClick={handleStop} style={btnGreen}>
             [] STOP
           </button>
         )}
-        <button onClick={onChangeMood} style={btnAmber}>
+        <button
+          onClick={() => {
+            if (sessionId) handleChangeMood("calm");
+            onChangeMood();
+          }}
+          style={btnAmber}
+        >
           MOOD
         </button>
         <button onClick={onHome} style={{ ...btnGreen, fontSize: 8 }}>

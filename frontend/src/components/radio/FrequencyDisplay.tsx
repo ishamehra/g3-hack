@@ -1,18 +1,17 @@
 "use client";
 
-import type { AppScreen } from "@/types";
-import type { TrackInfo } from "@/lib/lyria/LyriaAudioPlayer";
+import type { AppScreen, LyriaParamsRow } from "@/types";
 
 interface FrequencyDisplayProps {
   appScreen: AppScreen;
-  currentTrack: TrackInfo | null;
-  playerState: string;
+  lyriaParams: LyriaParamsRow | null;
+  audioConnected: boolean;
 }
 
 export default function FrequencyDisplay({
   appScreen,
-  currentTrack,
-  playerState,
+  lyriaParams,
+  audioConnected,
 }: FrequencyDisplayProps) {
   let text = "-- STANDBY --";
 
@@ -21,13 +20,10 @@ export default function FrequencyDisplay({
   } else if (appScreen === "mood") {
     text = "SELECT TARGET";
   } else if (appScreen === "session") {
-    if (playerState === "playing" && currentTrack) {
-      const p = currentTrack.params;
-      text = `TRK ${String(currentTrack.track_number).padStart(2, "0")} | ${p.tempo_bpm} BPM`;
-    } else if (playerState === "loading") {
-      text = "LOADING...";
-    } else if (playerState === "crossfading") {
-      text = "CROSSFADING...";
+    if (audioConnected && lyriaParams) {
+      text = `${lyriaParams.bpm} BPM | ${lyriaParams.mood_label.toUpperCase()}`;
+    } else if (audioConnected) {
+      text = "STREAMING...";
     } else {
       text = "READY";
     }

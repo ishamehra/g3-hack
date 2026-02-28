@@ -1,8 +1,6 @@
 "use client";
 
-import type { AppScreen } from "@/types";
-import type { LyriaEngineHandle } from "@/components/session/LyriaEngine";
-import type { TrackInfo } from "@/lib/lyria/LyriaAudioPlayer";
+import type { AppScreen, LyriaParamsRow } from "@/types";
 import CDDrive from "./CDDrive";
 import FrequencyDisplay from "./FrequencyDisplay";
 import VUMeter from "./VUMeter";
@@ -10,21 +8,18 @@ import VolumeKnob from "./VolumeKnob";
 import SpeakerGrille from "./SpeakerGrille";
 
 interface RadioCDPanelProps {
-  playerState: string;
-  currentTrack: TrackInfo | null;
   appScreen: AppScreen;
-  engineRef: React.RefObject<LyriaEngineHandle | null>;
+  lyriaParams: LyriaParamsRow | null;
+  audioConnected: boolean;
+  onVolumeChange: (v: number) => void;
 }
 
 export default function RadioCDPanel({
-  playerState,
-  currentTrack,
   appScreen,
-  engineRef,
+  lyriaParams,
+  audioConnected,
+  onVolumeChange,
 }: RadioCDPanelProps) {
-  const isPlaying =
-    playerState === "playing" || playerState === "crossfading";
-
   return (
     <div
       className="flex flex-col items-center gap-4 self-stretch justify-between"
@@ -38,16 +33,14 @@ export default function RadioCDPanel({
         width: 220,
       }}
     >
-      <CDDrive isPlaying={isPlaying} />
+      <CDDrive isPlaying={audioConnected} />
       <FrequencyDisplay
         appScreen={appScreen}
-        currentTrack={currentTrack}
-        playerState={playerState}
+        lyriaParams={lyriaParams}
+        audioConnected={audioConnected}
       />
-      <VUMeter isPlaying={isPlaying} />
-      <VolumeKnob
-        onChange={(v) => engineRef.current?.setVolume(v)}
-      />
+      <VUMeter isPlaying={audioConnected} />
+      <VolumeKnob onChange={onVolumeChange} />
       <SpeakerGrille />
     </div>
   );

@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { AppScreen } from "@/types";
-import type { MoodState } from "@/types";
-import type { LyriaEngineHandle } from "@/components/session/LyriaEngine";
-import type { TrackInfo } from "@/lib/lyria/LyriaAudioPlayer";
+import type { AppScreen, MoodState, LyriaParamsRow } from "@/types";
 import OnboardingScreen from "@/components/screens/OnboardingScreen";
 import BiometricScreen from "@/components/screens/BiometricScreen";
 import MoodSelectorScreen from "@/components/screens/MoodSelectorScreen";
@@ -15,9 +12,11 @@ interface ScreenContentProps {
   onNavigate: (screen: AppScreen) => void;
   targetMood: MoodState | null;
   onMoodSelect: (mood: MoodState) => void;
-  playerState: string;
-  engineRef: React.RefObject<LyriaEngineHandle | null>;
-  currentTrack: TrackInfo | null;
+  sessionId: string | null;
+  onSessionStart: (id: string) => void;
+  onSessionEnd: () => void;
+  lyriaParams: LyriaParamsRow | null;
+  audioConnected: boolean;
 }
 
 export default function ScreenContent({
@@ -25,9 +24,11 @@ export default function ScreenContent({
   onNavigate,
   targetMood,
   onMoodSelect,
-  playerState,
-  engineRef,
-  currentTrack,
+  sessionId,
+  onSessionStart,
+  onSessionEnd,
+  lyriaParams,
+  audioConnected,
 }: ScreenContentProps) {
   const [transitioning, setTransitioning] = useState(false);
   const [activeScreen, setActiveScreen] = useState(screen);
@@ -45,7 +46,6 @@ export default function ScreenContent({
 
   return (
     <div className="relative w-full h-full">
-      {/* Static noise transition overlay */}
       {transitioning && (
         <div
           className="absolute inset-0 z-50"
@@ -77,9 +77,11 @@ export default function ScreenContent({
       {activeScreen === "session" && (
         <SessionScreen
           targetMood={targetMood}
-          playerState={playerState}
-          engineRef={engineRef}
-          currentTrack={currentTrack}
+          sessionId={sessionId}
+          onSessionStart={onSessionStart}
+          onSessionEnd={onSessionEnd}
+          lyriaParams={lyriaParams}
+          audioConnected={audioConnected}
           onChangeMood={() => onNavigate("mood")}
           onHome={() => onNavigate("onboarding")}
         />

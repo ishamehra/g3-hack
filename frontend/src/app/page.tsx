@@ -1,21 +1,20 @@
 "use client";
 
-import { useRef, useState } from "react";
-import LyriaEngine, {
-  type LyriaEngineHandle,
-} from "@/components/session/LyriaEngine";
-import type { TrackInfo } from "@/lib/lyria/LyriaAudioPlayer";
+import { useState } from "react";
 import type { MoodState } from "@/types";
 import { useAppState } from "@/hooks/useAppState";
+import { useLyriaParams } from "@/hooks/useLyriaParams";
+import { useAudioStream } from "@/hooks/useAudioStream";
 import CRTMonitor from "@/components/crt/CRTMonitor";
 import ScreenContent from "@/components/crt/ScreenContent";
 import RadioCDPanel from "@/components/radio/RadioCDPanel";
 
 export default function Home() {
-  const engineRef = useRef<LyriaEngineHandle>(null);
-  const [playerState, setPlayerState] = useState("idle");
-  const [currentTrack, setCurrentTrack] = useState<TrackInfo | null>(null);
   const { screen, targetMood, goTo, setTargetMood } = useAppState();
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  const lyriaParams = useLyriaParams(sessionId);
+  const { connected: audioConnected, setVolume } = useAudioStream(!!sessionId);
 
   const handleMoodSelect = (mood: MoodState) => {
     setTargetMood(mood);
@@ -24,34 +23,27 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-8">
-      {/* Hidden audio engine — no visual output */}
-      <div className="hidden">
-        <LyriaEngine
-          ref={engineRef}
-          onStateChange={setPlayerState}
-          onTrackChange={setCurrentTrack}
-        />
-      </div>
-
       <div className="flex items-stretch gap-8">
-      <CRTMonitor>
-        <ScreenContent
-          screen={screen}
-          onNavigate={goTo}
-          targetMood={targetMood}
-          onMoodSelect={handleMoodSelect}
-          playerState={playerState}
-          engineRef={engineRef}
-          currentTrack={currentTrack}
-        />
-      </CRTMonitor>
+        <CRTMonitor>
+          <ScreenContent
+            screen={screen}
+            onNavigate={goTo}
+            targetMood={targetMood}
+            onMoodSelect={handleMoodSelect}
+            sessionId={sessionId}
+            onSessionStart={setSessionId}
+            onSessionEnd={() => setSessionId(null)}
+            lyriaParams={lyriaParams}
+            audioConnected={audioConnected}
+          />
+        </CRTMonitor>
 
-      <RadioCDPanel
-        playerState={playerState}
-        currentTrack={currentTrack}
-        appScreen={screen}
-        engineRef={engineRef}
-      />
+        <RadioCDPanel
+          appScreen={screen}
+          lyriaParams={lyriaParams}
+          audioConnected={audioConnected}
+          onVolumeChange={setVolume}
+        />
       </div>
     </main>
   );
