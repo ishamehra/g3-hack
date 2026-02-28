@@ -12,32 +12,26 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from temporalio.client import Client
-from temporalio.worker import Worker
 
-from resonance.activities import (
-    call_gemini,
-    compose_state_activity,
-    poll_oura,
-    set_lyria_manager,
-    update_lyria,
-    upsert_supabase,
-)
 from resonance.lyria_manager import LyriaManager
 from resonance.models import SessionInput
 from resonance.supabase_client import create_session, get_supabase, insert_signal
-from resonance.workflows import BiofeedbackWorkflow
 
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("resonance")
 
+# ── Mode detection ────────────────────────────────────────────────────
+# If TEMPORAL_ADDRESS is set, use Temporal. Otherwise, use SimpleLoop.
+USE_TEMPORAL = bool(os.environ.get("TEMPORAL_ADDRESS"))
+
 # ── Global state ─────────────────────────────────────────────────────
 
 audio_clients: set[WebSocket] = set()
 lyria_manager = LyriaManager()
 workflow_handle = None
+simple_loop = None
 audio_task: asyncio.Task | None = None
 current_session_id: str | None = None
 
@@ -62,53 +56,64 @@ async def stream_lyria_audio():
         logger.error("Audio stream error: %s", e)
 
 
-# ── FastAPI lifespan (start Temporal worker) ─────────────────────────
+# ── FastAPI lifespan ─────────────────────────────────────────────────
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Connect to local Temporal dev server
-    client = await Client.connect(
-        os.environ.get("TEMPORAL_ADDRESS", "localhost:7233"),
-    )
-    app.state.temporal_client = client
-
-    # Wire activity singletons
-    set_lyria_manager(lyria_manager)
-
-    # Initialize Supabase client (validates env vars early)
+    # Initialize Supabase client
     try:
         get_supabase()
         logger.info("Supabase client initialized")
     except Exception as e:
         logger.warning("Supabase not configured: %s", e)
 
-    # Start Temporal worker as background task
-    worker = Worker(
-        client,
-        task_queue="resonance",
-        workflows=[BiofeedbackWorkflow],
-        activities=[
-            poll_oura,
-            compose_state_activity,
+    worker_task = None
+
+    if USE_TEMPORAL:
+        from temporalio.client import Client
+        from temporalio.worker import Worker
+        from resonance.activities import (
             call_gemini,
-            upsert_supabase,
+            compose_state_activity,
+            poll_oura,
+            set_lyria_manager,
             update_lyria,
-        ],
-    )
-    worker_task = asyncio.create_task(worker.run())
-    logger.info("Temporal worker started on task queue 'resonance'")
+            upsert_supabase,
+        )
+        from resonance.workflows import BiofeedbackWorkflow
+
+        client = await Client.connect(os.environ["TEMPORAL_ADDRESS"])
+        app.state.temporal_client = client
+        set_lyria_manager(lyria_manager)
+
+        worker = Worker(
+            client,
+            task_queue="resonance",
+            workflows=[BiofeedbackWorkflow],
+            activities=[
+                poll_oura, compose_state_activity, call_gemini,
+                upsert_supabase, update_lyria,
+            ],
+        )
+        worker_task = asyncio.create_task(worker.run())
+        logger.info("Temporal worker started on task queue 'resonance'")
+    else:
+        logger.info("Running in SimpleLoop mode (no Temporal)")
 
     yield
 
     # Cleanup
     if lyria_manager.is_running():
         await lyria_manager.stop()
-    worker_task.cancel()
-    try:
-        await worker_task
-    except asyncio.CancelledError:
-        pass
+    if simple_loop:
+        simple_loop.stop()
+    if worker_task:
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(title="RESONANCE", lifespan=lifespan)
@@ -151,8 +156,8 @@ class SignalIngestRequest(BaseModel):
 
 @app.post("/api/session/start")
 async def start_session(req: StartSessionRequest):
-    """Create a Supabase session row, start Lyria, start Temporal workflow."""
-    global workflow_handle, audio_task, current_session_id
+    """Create a Supabase session row, start Lyria, start biofeedback loop."""
+    global workflow_handle, simple_loop, audio_task, current_session_id
 
     genre_list = [g.strip() for g in req.genres.split(",") if g.strip()]
 
@@ -175,32 +180,46 @@ async def start_session(req: StartSessionRequest):
         await lyria_manager.start()
     audio_task = asyncio.create_task(stream_lyria_audio())
 
-    # 3. Start Temporal workflow
-    client: Client = app.state.temporal_client
-    session_input = SessionInput(
-        session_id=session_id,
-        user_id="demo",
-        target_mood=req.target_mood,
-        genre_preferences=genre_list,
-    )
-    wf_id = f"resonance-{datetime.now().strftime('%H%M%S')}"
-    workflow_handle = await client.start_workflow(
-        BiofeedbackWorkflow.run,
-        session_input,
-        id=wf_id,
-        task_queue="resonance",
-    )
-    logger.info("Session %s started (workflow %s)", session_id, wf_id)
-    return {"status": "started", "session_id": session_id, "workflow_id": wf_id}
+    # 3. Start biofeedback loop
+    if USE_TEMPORAL:
+        from resonance.workflows import BiofeedbackWorkflow
+
+        client = app.state.temporal_client
+        session_input = SessionInput(
+            session_id=session_id,
+            user_id="demo",
+            target_mood=req.target_mood,
+            genre_preferences=genre_list,
+        )
+        wf_id = f"resonance-{datetime.now().strftime('%H%M%S')}"
+        workflow_handle = await client.start_workflow(
+            BiofeedbackWorkflow.run,
+            session_input,
+            id=wf_id,
+            task_queue="resonance",
+        )
+        logger.info("Session %s started (Temporal workflow %s)", session_id, wf_id)
+    else:
+        from resonance.simple_loop import SimpleLoop
+
+        simple_loop = SimpleLoop(lyria_manager)
+        simple_loop.start(session_id, req.target_mood, genre_list)
+        logger.info("Session %s started (SimpleLoop)", session_id)
+
+    return {"status": "started", "session_id": session_id, "mode": "temporal" if USE_TEMPORAL else "simple"}
 
 
 @app.post("/api/session/stop")
 async def stop_session():
-    global workflow_handle, audio_task, current_session_id
+    global workflow_handle, simple_loop, audio_task, current_session_id
 
-    if workflow_handle:
+    if USE_TEMPORAL and workflow_handle:
+        from resonance.workflows import BiofeedbackWorkflow
         await workflow_handle.signal(BiofeedbackWorkflow.stop)
         workflow_handle = None
+    if simple_loop:
+        simple_loop.stop()
+        simple_loop = None
     if audio_task:
         audio_task.cancel()
         audio_task = None
@@ -211,7 +230,6 @@ async def stop_session():
 
 @app.post("/api/session/cycle")
 async def update_cycle(req: CycleUpdateRequest):
-    """Update cycle data on the current session."""
     if not current_session_id:
         return {"error": "no active session"}
     try:
@@ -228,7 +246,6 @@ async def update_cycle(req: CycleUpdateRequest):
 
 @app.post("/api/signals/ingest")
 async def ingest_signal(req: SignalIngestRequest):
-    """Insert a raw biometric signal into the signals table."""
     if not current_session_id:
         return {"error": "no active session"}
     try:
@@ -249,15 +266,21 @@ async def ingest_signal(req: SignalIngestRequest):
 
 @app.get("/api/session/state")
 async def get_state():
-    if workflow_handle:
+    if USE_TEMPORAL and workflow_handle:
+        from resonance.workflows import BiofeedbackWorkflow
         return await workflow_handle.query(BiofeedbackWorkflow.current_state)
+    if simple_loop:
+        return simple_loop.current_state
     return {}
 
 
 @app.post("/api/mood")
 async def set_mood(mood: str):
-    if workflow_handle:
+    if USE_TEMPORAL and workflow_handle:
+        from resonance.workflows import BiofeedbackWorkflow
         await workflow_handle.signal(BiofeedbackWorkflow.update_mood, mood)
+    elif simple_loop:
+        simple_loop.update_mood(mood)
     return {"mood": mood}
 
 
@@ -265,8 +288,10 @@ async def set_mood(mood: str):
 async def health():
     return {
         "status": "ok",
+        "mode": "temporal" if USE_TEMPORAL else "simple",
         "lyria_running": lyria_manager.is_running(),
         "workflow_active": workflow_handle is not None,
+        "loop_active": simple_loop is not None and simple_loop._running if simple_loop else False,
         "session_id": current_session_id,
         "audio_clients": len(audio_clients),
     }
@@ -283,15 +308,15 @@ async def websocket_endpoint(ws: WebSocket):
     logger.info("Audio client connected (%d total)", len(audio_clients))
     try:
         while True:
-            # Keep connection alive; accept client messages for control
             raw = await ws.receive_text()
             data = json.loads(raw)
             msg_type = data.get("type")
-
-            if msg_type == "set_target" and workflow_handle:
-                await workflow_handle.signal(
-                    BiofeedbackWorkflow.update_mood, data["target"],
-                )
+            if msg_type == "set_target":
+                if USE_TEMPORAL and workflow_handle:
+                    from resonance.workflows import BiofeedbackWorkflow
+                    await workflow_handle.signal(BiofeedbackWorkflow.update_mood, data["target"])
+                elif simple_loop:
+                    simple_loop.update_mood(data["target"])
     except WebSocketDisconnect:
         pass
     except Exception as e:
@@ -302,7 +327,6 @@ async def websocket_endpoint(ws: WebSocket):
 
 
 # ── Entrypoint ───────────────────────────────────────────────────────
-
 if __name__ == "__main__":
     import uvicorn
 
