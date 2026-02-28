@@ -5,6 +5,7 @@ import type { MoodState } from "@/types";
 import { useAppState } from "@/hooks/useAppState";
 import { useLyriaParams } from "@/hooks/useLyriaParams";
 import { useAudioStream } from "@/hooks/useAudioStream";
+import { useBassReactivity } from "@/hooks/useBassReactivity";
 import { useOuraStatus } from "@/hooks/useOuraStatus";
 import CRTMonitor from "@/components/crt/CRTMonitor";
 import ScreenContent from "@/components/crt/ScreenContent";
@@ -16,7 +17,8 @@ export default function Home() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [volume, setVolumeState] = useState(0.7);
   const lyriaParams = useLyriaParams(sessionId);
-  const { connected: audioConnected, setVolume: setAudioVolume } = useAudioStream(!!sessionId);
+  const { connected: audioConnected, setVolume: setAudioVolume, analyser } = useAudioStream(!!sessionId);
+  const bassIntensity = useBassReactivity(analyser);
   const { isConnected: ouraConnected } = useOuraStatus();
 
   // Restore persisted state after hydration
@@ -124,6 +126,8 @@ export default function Home() {
           audioConnected={audioConnected}
           volume={volume}
           onVolumeChange={handleVolumeChange}
+          bassIntensity={bassIntensity}
+          analyser={analyser}
         />
       </div>
 
