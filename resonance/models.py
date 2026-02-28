@@ -51,6 +51,18 @@ class BiometricData(BaseModel):
     resilience_level: str | None = None
     # SpO2 (from /v2/usercollection/daily_spo2)
     spo2_avg: float | None = None
+    # Browser-based signals (zero-friction, no wearable needed)
+    digital_stress_score: float | None = None
+    motion_intensity: float | None = None
+    ambient_db: float | None = None
+    engagement_level: float | None = None
+
+
+class BrowserSignals(BaseModel):
+    engagement: dict = {}
+    digital_stress: dict = {}
+    motion: dict = {}
+    ambient: dict = {}
 
 
 class WeatherData(BaseModel):

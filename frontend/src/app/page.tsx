@@ -5,6 +5,7 @@ import type { MoodState } from "@/types";
 import { useAppState } from "@/hooks/useAppState";
 import { useLyriaParams } from "@/hooks/useLyriaParams";
 import { useAudioStream } from "@/hooks/useAudioStream";
+import { useBrowserSignals } from "@/hooks/useBrowserSignals";
 import CRTMonitor from "@/components/crt/CRTMonitor";
 import ScreenContent from "@/components/crt/ScreenContent";
 import RadioCDPanel from "@/components/radio/RadioCDPanel";
@@ -16,6 +17,7 @@ export default function Home() {
   const [volume, setVolumeState] = useState(0.7);
   const lyriaParams = useLyriaParams(sessionId);
   const { connected: audioConnected, setVolume: setAudioVolume } = useAudioStream(!!sessionId);
+  useBrowserSignals(!!sessionId);
 
   // Restore persisted state after hydration
   useEffect(() => {

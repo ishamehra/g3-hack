@@ -57,6 +57,13 @@ Additional signal interpretation:
 - Resilience level: "limited"/"adequate" → prioritize calming/supportive; "strong"/"exceptional" → user can handle more intensity.
 - Steps/active calories: if high (>8000 steps or >300 cal), elevated HR is likely from exercise, not stress — match energy OR offer recovery music depending on circadian phase.
 - SpO2: <95% average indicates possible respiratory issues → prioritize slow, deep-breathing-friendly rhythms.
+
+Browser-based signals (available when no wearable connected):
+- Digital stress score (0-1): derived from typing speed and pause patterns. High typing speed + short pauses = stressed.
+- Motion intensity (0-1): from device accelerometer. High = walking/exercising, low = sitting still.
+- Ambient sound level (dB): environment noise. <30=quiet, 30-50=moderate, 50-70=noisy, >70=loud.
+- Engagement level (0-1): from page visibility and interaction. 1=focused, 0.5=visible but idle, 0=tab hidden.
+- These signals provide real-time context even without biometric data. Use them to adjust music appropriately.
 """
 
 RESPONSE_SCHEMA = types.Schema(
@@ -142,6 +149,10 @@ def _build_user_message(state: CompositeState) -> str:
         f"- Steps Today: {bio.steps or 'unknown'}",
         f"- Active Calories: {bio.active_calories or 'unknown'}",
         f"- SpO2 Average: {bio.spo2_avg or 'unknown'}%",
+        f"- Digital Stress Score: {bio.digital_stress_score if bio.digital_stress_score is not None else 'unknown'}",
+        f"- Motion Intensity: {bio.motion_intensity if bio.motion_intensity is not None else 'unknown'}",
+        f"- Ambient Sound Level: {bio.ambient_db if bio.ambient_db is not None else 'unknown'} dB",
+        f"- Engagement Level: {bio.engagement_level if bio.engagement_level is not None else 'unknown'}",
         f"- Weather: {weather_str}",
         f"- Circadian Phase: {state.circadian_phase}",
         f"- Cycle Phase: {state.cycle_phase or 'not tracked'}",

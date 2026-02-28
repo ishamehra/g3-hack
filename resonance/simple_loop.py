@@ -44,10 +44,14 @@ class SimpleLoop:
         self._task: asyncio.Task | None = None
         self._oura: OuraClient | None = None
         self._prev_params: LyriaParams | None = None
+        self._browser_signals: dict = {}
 
     @property
     def current_state(self) -> dict:
         return self._current_state
+
+    def set_browser_signals(self, signals: dict):
+        self._browser_signals = signals
 
     def update_mood(self, mood: str):
         self._target_mood = mood
@@ -80,6 +84,27 @@ class SimpleLoop:
     async def _iterate(self):
         # 1. Poll Oura
         bio = await self._poll_oura()
+
+        # Merge browser signals into biometrics
+        bs = self._browser_signals
+        if bs:
+            stress = bs.get("digital_stress", {})
+            typing_cps = stress.get("typing_cps", 0)
+            pause_ms = stress.get("pause_avg_ms", 500)
+            # Compute digital stress score: high typing + short pauses = stressed
+            if typing_cps > 0:
+                bio.digital_stress_score = min(1.0, typing_cps / 8.0) * (1 - min(1.0, pause_ms / 1000))
+
+            motion = bs.get("motion", {})
+            bio.motion_intensity = motion.get("intensity")
+
+            ambient = bs.get("ambient", {})
+            bio.ambient_db = ambient.get("db")
+
+            engagement = bs.get("engagement", {})
+            idle = engagement.get("idle_seconds", 0)
+            visible = engagement.get("is_visible", True)
+            bio.engagement_level = 1.0 if visible and idle < 5 else (0.5 if visible else 0.0)
 
         # 2. Compose state
         weather = None

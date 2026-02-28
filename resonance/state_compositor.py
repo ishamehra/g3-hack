@@ -43,8 +43,8 @@ def normalize_biometrics(
 
     norm_hr = _normalize_z(bio.hr, b["avg_hr"], b["std_hr"])
     norm_hrv = _normalize_z(bio.hrv, b["avg_hrv"], b["std_hrv"])
-    norm_sleep = _clamp_01((bio.sleep_score - 50) / 50) if bio.sleep_score else 0.5
-    norm_readiness = _clamp_01((bio.readiness_score - 50) / 50) if bio.readiness_score else 0.5
+    norm_sleep = _clamp_01((bio.sleep_score - 50) / 50) if bio.sleep_score is not None else 0.5
+    norm_readiness = _clamp_01((bio.readiness_score - 50) / 50) if bio.readiness_score is not None else 0.5
 
     return {
         "norm_hr": round(norm_hr, 3),
@@ -88,6 +88,14 @@ def infer_emotional_state(
     if is_physically_active and raw_arousal > 0:
         raw_arousal *= 0.5  # exercise HR → halve the arousal signal
 
+    # Browser-based signal influence
+    if bio.digital_stress_score is not None:
+        raw_arousal += 0.3 * bio.digital_stress_score
+    if bio.motion_intensity is not None:
+        raw_arousal += 0.2 * bio.motion_intensity
+    if bio.engagement_level is not None and bio.engagement_level > 0.7:
+        raw_arousal -= 0.1  # high engagement (focused) slightly lowers arousal
+
     arousal = max(-1.0, min(1.0, raw_arousal))
 
     # Base valence from recovery signals
@@ -103,6 +111,13 @@ def infer_emotional_state(
     # Resilience bonus: strong recovery capacity boosts valence
     if bio.resilience_level:
         base_valence += _RESILIENCE_BONUS.get(bio.resilience_level, 0.0)
+
+    # Ambient environment influence on valence
+    if bio.ambient_db is not None:
+        if bio.ambient_db > 70:
+            base_valence -= 0.1  # very noisy environment drags valence
+        elif bio.ambient_db < 30:
+            base_valence += 0.05  # quiet environment slight boost
 
     # Stress penalty: high arousal drags valence down
     valence = base_valence - (arousal * stress_penalty_weight) if arousal > 0 else base_valence
