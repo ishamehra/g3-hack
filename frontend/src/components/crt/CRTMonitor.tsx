@@ -27,7 +27,7 @@ export default function CRTMonitor({ children, overlay, toggles }: CRTMonitorPro
     >
       {/* Bezel */}
       <div
-        className="relative overflow-hidden m-2 md:m-3 mb-0 md:mb-0"
+        className="relative overflow-hidden m-2 md:m-3 mb-0 md:mb-0 min-h-0 shrink-0"
         style={{
           borderRadius: 16,
           border: "3px solid #111",
@@ -35,9 +35,9 @@ export default function CRTMonitor({ children, overlay, toggles }: CRTMonitorPro
             "inset 0 0 30px rgba(0,0,0,0.8), inset 0 0 8px rgba(0,0,0,0.5)",
         }}
       >
-        {/* Screen */}
+        {/* Screen — fixed size, never grows */}
         <div
-          className="relative overflow-hidden w-full md:w-[620px] aspect-[4/5] md:aspect-[4/3]"
+          className="relative overflow-hidden w-full md:w-[620px] h-[calc(100vw*5/4)] md:h-[465px]"
           style={{ background: "#0a0a0a" }}
         >
           <CRTScreenOverlay />
