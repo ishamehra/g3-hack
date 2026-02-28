@@ -33,7 +33,7 @@ export default function CRTMonitor({ children }: CRTMonitorProps) {
           style={{ background: "#0a0a0a" }}
         >
           <CRTScreenOverlay />
-          <div className="relative z-[1] w-full h-full p-4 md:p-6 overflow-hidden md:overflow-y-auto">
+          <div className="relative z-[1] w-full h-full p-3 md:p-5 overflow-hidden md:overflow-y-auto">
             {children}
           </div>
         </div>

@@ -86,12 +86,12 @@ export default function SessionScreen({
 
   return (
     <div className="flex flex-col h-full">
-      <h2 className="text-sm mb-3" style={textAmber}>
+      <h2 className="text-sm mb-2" style={textAmber}>
         NOW PLAYING
       </h2>
 
       {lyriaParams ? (
-        <div className="text-lg space-y-1 mb-3" style={textGreen}>
+        <div className="text-lg space-y-1 mb-2" style={textGreen}>
           <div>MOOD: {lyriaParams.mood_label.toUpperCase()}</div>
           <div>
             INSTRUMENTS: {lyriaParams.instruments.join(", ").toUpperCase()}
@@ -102,14 +102,14 @@ export default function SessionScreen({
           </div>
         </div>
       ) : (
-        <div className="text-lg mb-3" style={textDim}>
+        <div className="text-lg mb-2" style={textDim}>
           {sessionState === "connecting" ? "CONNECTING..." : "NO STREAM"}
         </div>
       )}
 
       <div style={separator} />
 
-      <div className="text-lg space-y-1 mb-3" style={textGreen}>
+      <div className="text-lg space-y-1 mb-2" style={textGreen}>
         <div>
           TARGET:{" "}
           <span style={{ ...textAmber, fontFamily: "var(--font-vt323)" }}>
@@ -132,7 +132,7 @@ export default function SessionScreen({
 
       {lyriaParams?.narration && (
         <div
-          className="text-xs mb-3 leading-relaxed"
+          className="text-xs mb-2 leading-relaxed"
           style={{ ...textDim, fontFamily: "var(--font-vt323)" }}
         >
           {lyriaParams.narration}
@@ -140,7 +140,7 @@ export default function SessionScreen({
       )}
 
       {isActive && audioConnected && (
-        <div className="text-lg mb-3" style={textGreen}>
+        <div className="text-lg mb-2" style={textGreen}>
           [
           <span style={{ color: GREEN }}>
             {"█".repeat(8)}
@@ -152,13 +152,13 @@ export default function SessionScreen({
 
       <div style={separator} />
 
-      <div className="text-base space-y-1 mb-3" style={textGreen}>
+      <div className="text-base space-y-1 mb-2" style={textGreen}>
         <div>
           HR: {hr} | HRV: {hrv} | STRESS: {stressPct}
         </div>
       </div>
 
-      <div className="mt-auto flex gap-3 flex-wrap">
+      <div className="mt-auto flex gap-2 flex-wrap">
         {sessionState === "idle" || sessionState === "error" ? (
           <button onClick={handleStart} style={btnGreen}>
             {">"} START

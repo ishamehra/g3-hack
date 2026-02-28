@@ -25,6 +25,14 @@ export default function CRTScreenOverlay() {
             "radial-gradient(ellipse at center, rgba(51,255,51,0.03) 0%, transparent 70%)",
         }}
       />
+      {/* Subtle phosphor flicker */}
+      <div
+        className="absolute inset-0 pointer-events-none z-10"
+        style={{
+          background: "rgba(51,255,51,0.02)",
+          animation: "phosphor-flicker 4s ease-in-out infinite",
+        }}
+      />
     </>
   );
 }

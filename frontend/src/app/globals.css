@@ -581,6 +581,11 @@
   100% { opacity: 0.01; }
 }
 
+@keyframes phosphor-flicker {
+  0%, 100% { opacity: 0.98; }
+  50% { opacity: 1; }
+}
+
 @keyframes static-noise {
   0% { background-position: 0 0; }
   25% { background-position: 2px 1px; }

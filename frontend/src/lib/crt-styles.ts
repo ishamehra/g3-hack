@@ -27,7 +27,7 @@ export const textDim: React.CSSProperties = {
 export const btnGreen: React.CSSProperties = {
   fontFamily: "var(--font-press-start)",
   fontSize: 10,
-  padding: "10px 20px",
+  padding: "8px 16px",
   border: `1px solid ${GREEN_DIM}`,
   background: "transparent",
   color: GREEN,
@@ -39,7 +39,7 @@ export const btnGreen: React.CSSProperties = {
 export const btnAmber: React.CSSProperties = {
   fontFamily: "var(--font-press-start)",
   fontSize: 10,
-  padding: "10px 20px",
+  padding: "8px 16px",
   border: `1px solid ${AMBER_DIM}`,
   background: "transparent",
   color: AMBER,
@@ -50,5 +50,5 @@ export const btnAmber: React.CSSProperties = {
 
 export const separator: React.CSSProperties = {
   borderTop: `1px solid ${GREEN_DIM}`,
-  margin: "8px 0",
+  margin: "6px 0",
 };
