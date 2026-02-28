@@ -1,4 +1,10 @@
-export default function SpeakerGrille() {
+interface SpeakerGrilleProps {
+  bassIntensity?: number;
+}
+
+export default function SpeakerGrille({ bassIntensity = 0 }: SpeakerGrilleProps) {
+  const wooferScale = 1 + bassIntensity * 0.08;
+
   return (
     <div className="flex flex-col items-center gap-3">
       {/* Tweeter */}
@@ -23,6 +29,10 @@ export default function SpeakerGrille() {
           border: "3px solid #333",
           boxShadow:
             "inset 0 0 20px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)",
+          transform: `scale(${wooferScale})`,
+          transformOrigin: "center center",
+          willChange: "transform",
+          transition: "transform 0.05s ease-out",
         }}
       />
     </div>

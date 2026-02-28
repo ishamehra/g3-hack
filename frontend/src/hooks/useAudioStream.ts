@@ -13,6 +13,7 @@ import { config } from "@/lib/config";
  */
 export function useAudioStream(active: boolean) {
   const [connected, setConnected] = useState(false);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
   const gainRef = useRef<GainNode | null>(null);
@@ -27,8 +28,13 @@ export function useAudioStream(active: boolean) {
     const ctx = new AudioContext({ sampleRate: 48000 });
     ctxRef.current = ctx;
 
+    const analyserNode = ctx.createAnalyser();
+    analyserNode.fftSize = 2048;
+    setAnalyser(analyserNode);
+
     const gain = ctx.createGain();
-    gain.connect(ctx.destination);
+    gain.connect(analyserNode);
+    analyserNode.connect(ctx.destination);
     gainRef.current = gain;
 
     // Scheduling state
@@ -101,10 +107,11 @@ export function useAudioStream(active: boolean) {
     return () => {
       ws.close();
       ctx.close();
+      setAnalyser(null);
     };
   }, [active]);
 
-  return { connected, setVolume };
+  return { connected, setVolume, analyser };
 }
 
 /** Decode raw 16-bit PCM stereo bytes into an AudioBuffer. */

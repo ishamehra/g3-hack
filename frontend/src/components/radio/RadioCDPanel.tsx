@@ -14,6 +14,8 @@ interface RadioCDPanelProps {
   audioConnected: boolean;
   volume: number;
   onVolumeChange: (v: number) => void;
+  bassIntensity?: number;
+  analyser?: AnalyserNode | null;
 }
 
 export default function RadioCDPanel({
@@ -22,7 +24,11 @@ export default function RadioCDPanel({
   audioConnected,
   volume,
   onVolumeChange,
+  bassIntensity = 0,
+  analyser,
 }: RadioCDPanelProps) {
+  const scale = 1 + bassIntensity * 0.04;
+
   return (
     <div
       className="
@@ -39,6 +45,10 @@ export default function RadioCDPanel({
         border: "2px solid #222",
         boxShadow:
           "inset 0 1px 2px rgba(255,255,255,0.05), 0 8px 32px rgba(0,0,0,0.6)",
+        transform: `scale(${scale})`,
+        transformOrigin: "center center",
+        willChange: "transform",
+        transition: "transform 0.05s ease-out",
       }}
     >
       {/* CD Drive — hidden on mobile, shown on desktop */}
@@ -46,7 +56,7 @@ export default function RadioCDPanel({
         <CDDrive isPlaying={audioConnected} />
       </div>
 
-      <VUMeter isPlaying={audioConnected} />
+      <VUMeter isPlaying={audioConnected} analyser={analyser ?? null} />
 
       <FrequencyDisplay
         appScreen={appScreen}
@@ -61,7 +71,7 @@ export default function RadioCDPanel({
 
       {/* Speaker — hidden on mobile, shown on desktop */}
       <div className="hidden md:block">
-        <SpeakerGrille />
+        <SpeakerGrille bassIntensity={bassIntensity} />
       </div>
     </div>
   );
