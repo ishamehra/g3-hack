@@ -9,18 +9,17 @@ interface CRTMonitorProps {
 export default function CRTMonitor({ children }: CRTMonitorProps) {
   return (
     <div
-      className="relative flex flex-col"
+      className="relative flex flex-col w-full md:w-auto"
       style={{
         background: "linear-gradient(145deg, #2a2a2a, #1a1a1a, #0d0d0d)",
         borderRadius: 24,
-        padding: "20px 20px 0 20px",
         boxShadow:
           "inset 0 2px 4px rgba(255,255,255,0.05), 0 20px 60px rgba(0,0,0,0.8), 0 0 0 2px #111",
       }}
     >
       {/* Bezel */}
       <div
-        className="relative overflow-hidden"
+        className="relative overflow-hidden m-2 md:m-5 mb-0 md:mb-0"
         style={{
           borderRadius: 16,
           border: "3px solid #111",
@@ -30,22 +29,18 @@ export default function CRTMonitor({ children }: CRTMonitorProps) {
       >
         {/* Screen */}
         <div
-          className="relative overflow-hidden"
-          style={{
-            background: "#0a0a0a",
-            aspectRatio: "4 / 3",
-            width: 580,
-          }}
+          className="relative overflow-hidden w-full md:w-[580px] aspect-[4/5] md:aspect-[4/3]"
+          style={{ background: "#0a0a0a" }}
         >
           <CRTScreenOverlay />
-          <div className="relative z-[1] w-full h-full p-6 overflow-y-auto">
+          <div className="relative z-[1] w-full h-full p-4 md:p-6 overflow-hidden md:overflow-y-auto">
             {children}
           </div>
         </div>
       </div>
 
       {/* Base / chin */}
-      <div className="flex items-center justify-between px-6 py-3">
+      <div className="flex items-center justify-between px-4 md:px-6 py-2 md:py-3">
         <div
           className="w-2 h-2 rounded-full animate-pulse"
           style={{
@@ -54,7 +49,7 @@ export default function CRTMonitor({ children }: CRTMonitorProps) {
           }}
         />
         <span
-          className="text-[10px] tracking-[3px]"
+          className="text-[8px] md:text-[10px] tracking-[3px]"
           style={{
             fontFamily: "var(--font-press-start)",
             color: "#ffb000",

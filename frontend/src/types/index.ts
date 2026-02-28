@@ -1,5 +1,5 @@
 // ---- App navigation ----
-export type AppScreen = "onboarding" | "biometric" | "mood" | "session";
+export type AppScreen = "onboarding" | "biometric" | "mood" | "session" | "privacy" | "tos";
 
 // ---- Lyria scale enum (matches backend) ----
 export type LyriaScale =

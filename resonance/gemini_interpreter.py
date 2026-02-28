@@ -47,6 +47,16 @@ Key principles:
 - Weather: cold/overcast → warmer sounds; sunny → brighter timbres.
 - ALWAYS honour the target mood — it represents the user's intention.
 - Incorporate genre preferences into prompt keywords when provided.
+
+Additional signal interpretation:
+- Deep sleep duration: <30 min = poor recovery → gentler, more supportive music.
+- REM sleep: <60 min = emotional processing deficit → favor emotionally grounding music.
+- Sleep efficiency: <80% = fragmented sleep → avoid jarring transitions.
+- Temperature delta: positive deviation = potential inflammation/illness → soothing, restorative music.
+- Lowest resting HR during sleep: if significantly above baseline → incomplete recovery.
+- Resilience level: "limited"/"adequate" → prioritize calming/supportive; "strong"/"exceptional" → user can handle more intensity.
+- Steps/active calories: if high (>8000 steps or >300 cal), elevated HR is likely from exercise, not stress — match energy OR offer recovery music depending on circadian phase.
+- SpO2: <95% average indicates possible respiratory issues → prioritize slow, deep-breathing-friendly rhythms.
 """
 
 RESPONSE_SCHEMA = types.Schema(
@@ -109,25 +119,36 @@ def _get_client() -> genai.Client:
 
 
 def _build_user_message(state: CompositeState) -> str:
+    bio = state.biometrics
     weather_str = (
-        f"{state.weather.temp_f:.0f}°F, {state.weather.condition}"
+        f"{state.weather.temp_f:.0f}°F, {state.weather.condition}, {state.weather.humidity or 'unknown'}% humidity"
         if state.weather
         else "unknown"
     )
     genres = ", ".join(state.genre_preferences) if state.genre_preferences else "any"
-    return (
-        f"Current state:\n"
-        f"- Heart Rate: {state.biometrics.hr or 'unknown'} bpm\n"
-        f"- HRV: {state.biometrics.hrv or 'unknown'} ms\n"
-        f"- Stress: {state.biometrics.stress_pct or 'unknown'}\n"
-        f"- Sleep Score: {state.biometrics.sleep_score or 'unknown'}\n"
-        f"- Readiness: {state.biometrics.readiness_score or 'unknown'}\n"
-        f"- Weather: {weather_str}\n"
-        f"- Circadian Phase: {state.circadian_phase}\n"
-        f"- Cycle Phase: {state.cycle_phase or 'not tracked'}\n"
-        f"- Target Mood: {state.target_mood}\n"
-        f"- Genre Preferences: {genres}"
-    )
+    lines = [
+        "Current state:",
+        f"- Heart Rate: {bio.hr or 'unknown'} bpm",
+        f"- HRV: {bio.hrv or 'unknown'} ms",
+        f"- Lowest Resting HR (sleep): {bio.hr_lowest or 'unknown'} bpm",
+        f"- Stress Level: {bio.stress_pct or 'unknown'}%",
+        f"- Sleep Score: {bio.sleep_score or 'unknown'}/100",
+        f"- Deep Sleep: {bio.deep_sleep_min or 'unknown'} min",
+        f"- REM Sleep: {bio.rem_sleep_min or 'unknown'} min",
+        f"- Sleep Efficiency: {bio.sleep_efficiency or 'unknown'}%",
+        f"- Body Temp Delta: {bio.temp_delta or 'unknown'} C",
+        f"- Readiness: {bio.readiness_score or 'unknown'}/100",
+        f"- Resilience: {bio.resilience_level or 'unknown'}",
+        f"- Steps Today: {bio.steps or 'unknown'}",
+        f"- Active Calories: {bio.active_calories or 'unknown'}",
+        f"- SpO2 Average: {bio.spo2_avg or 'unknown'}%",
+        f"- Weather: {weather_str}",
+        f"- Circadian Phase: {state.circadian_phase}",
+        f"- Cycle Phase: {state.cycle_phase or 'not tracked'}",
+        f"- Target Mood: {state.target_mood}",
+        f"- Genre Preferences: {genres}",
+    ]
+    return "\n".join(lines)
 
 
 async def interpret_state(state: CompositeState) -> GeminiInterpretation:
@@ -265,11 +286,18 @@ def fallback_interpretation(state: CompositeState) -> GeminiInterpretation:
         genre_str = " and ".join(state.genre_preferences[:3])
         prompts.append(WeightedPrompt(text=f"in the style of {genre_str}", weight=0.6))
 
-    # Narration
-    hr_str = f"HR {state.biometrics.hr}bpm" if state.biometrics.hr else "HR unknown"
+    # Narration — include new signals when available
+    bio = state.biometrics
+    hr_str = f"HR {bio.hr}bpm" if bio.hr else "HR unknown"
+    hrv_str = f", HRV {bio.hrv}ms" if bio.hrv else ""
     phase_str = f", {state.circadian_phase.replace('_', ' ')}" if state.circadian_phase else ""
     cycle_str = f", {state.cycle_phase} phase" if state.cycle_phase else ""
-    narration = f"Based on your biometrics ({hr_str}{phase_str}{cycle_str}), generating {mood_label.lower()} music. (AI offline fallback)"
+    resilience_str = f", resilience {bio.resilience_level}" if bio.resilience_level else ""
+    activity_str = f", {bio.steps} steps" if bio.steps else ""
+    narration = (
+        f"Based on your biometrics ({hr_str}{hrv_str}{resilience_str}{activity_str}"
+        f"{phase_str}{cycle_str}), generating {mood_label.lower()} music. (AI offline fallback)"
+    )
 
     return GeminiInterpretation(
         lyria_params=LyriaParams(

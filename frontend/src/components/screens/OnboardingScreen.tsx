@@ -51,12 +51,11 @@ export default function OnboardingScreen({
   }, [visibleLines]);
 
   const handleOuraLogin = () => {
-    // Redirect to the FastAPI backend OAuth initiator
     window.location.href = `${config.apiUrl}/api/auth/oura`;
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-full">
       <div>
         {BOOT_LINES.slice(0, visibleLines).map((line, i) => {
           const isTitle = i === 0;
@@ -91,12 +90,15 @@ export default function OnboardingScreen({
       </div>
 
       {showPrompt && (
-        <div className="pt-4 flex flex-col gap-4">
-          <button onClick={handleOuraLogin} style={btnAmber} className="mb-2">
+        <div className="mt-auto pt-4 flex flex-col gap-3">
+          <button onClick={handleOuraLogin} style={btnAmber}>
             {">"} CONNECT OURA RING
           </button>
-
-          <button onClick={onContinue} style={btnAmber} className="opacity-70 hover:opacity-100 transition-opacity">
+          <button
+            onClick={onContinue}
+            style={btnAmber}
+            className="opacity-70 hover:opacity-100 transition-opacity"
+          >
             {">"} BYPASS (USE CACHED DATA)
           </button>
         </div>

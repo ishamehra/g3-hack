@@ -6,6 +6,7 @@ import OnboardingScreen from "@/components/screens/OnboardingScreen";
 import BiometricScreen from "@/components/screens/BiometricScreen";
 import MoodSelectorScreen from "@/components/screens/MoodSelectorScreen";
 import SessionScreen from "@/components/screens/SessionScreen";
+import LegalScreen from "@/components/screens/LegalScreen";
 
 interface ScreenContentProps {
   screen: AppScreen;
@@ -85,6 +86,12 @@ export default function ScreenContent({
           onChangeMood={() => onNavigate("mood")}
           onHome={() => onNavigate("onboarding")}
         />
+      )}
+      {activeScreen === "privacy" && (
+        <LegalScreen type="privacy" onBack={() => onNavigate("onboarding")} />
+      )}
+      {activeScreen === "tos" && (
+        <LegalScreen type="tos" onBack={() => onNavigate("onboarding")} />
       )}
     </div>
   );

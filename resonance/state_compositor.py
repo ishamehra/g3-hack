@@ -54,6 +54,16 @@ def normalize_biometrics(
     }
 
 
+# Resilience level → valence bonus mapping
+_RESILIENCE_BONUS = {
+    "exceptional": 0.15,
+    "strong": 0.1,
+    "solid": 0.05,
+    "adequate": 0.0,
+    "limited": -0.1,
+}
+
+
 def infer_emotional_state(
     bio: BiometricData,
     baselines: dict | None = None,
@@ -63,16 +73,36 @@ def infer_emotional_state(
 
     - Arousal: derived from HR + HRV, filtered for physical activity
     - Valence: derived from sleep + readiness, penalized by stress/arousal
+    - Activity-aware: dampens arousal when elevated HR is from exercise, not stress
     """
     norms = normalize_biometrics(bio, baselines)
 
     # Arousal from HR (up) and HRV (inverse)
     raw_arousal = 0.6 * norms["norm_hr"] + 0.4 * (1 - norms["norm_hrv"])
+
+    # Activity-aware arousal: dampen if elevated HR is likely from exercise
+    is_physically_active = (
+        (bio.steps is not None and bio.steps > 5000)
+        or (bio.active_calories is not None and bio.active_calories > 200)
+    )
+    if is_physically_active and raw_arousal > 0:
+        raw_arousal *= 0.5  # exercise HR → halve the arousal signal
+
     arousal = max(-1.0, min(1.0, raw_arousal))
 
     # Base valence from recovery signals
-    base_valence = 0.5 * norms["norm_sleep"] + 0.5 * norms["norm_readiness"]
+    # Blend sleep_score with sleep_efficiency if available
+    sleep_signal = norms["norm_sleep"]
+    if bio.sleep_efficiency is not None:
+        eff_norm = _clamp_01((bio.sleep_efficiency - 50) / 50)
+        sleep_signal = 0.6 * sleep_signal + 0.4 * eff_norm
+
+    base_valence = 0.5 * sleep_signal + 0.5 * norms["norm_readiness"]
     base_valence = (base_valence * 2) - 1  # map 0-1 → -1 to 1
+
+    # Resilience bonus: strong recovery capacity boosts valence
+    if bio.resilience_level:
+        base_valence += _RESILIENCE_BONUS.get(bio.resilience_level, 0.0)
 
     # Stress penalty: high arousal drags valence down
     valence = base_valence - (arousal * stress_penalty_weight) if arousal > 0 else base_valence
