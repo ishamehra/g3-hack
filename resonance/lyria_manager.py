@@ -65,7 +65,7 @@ class LyriaManager:
         """Apply a MusicGenerationConfig to the active session."""
         if not self._session:
             return
-        config = types.MusicGenerationConfig(
+        config = types.LiveMusicGenerationConfig(
             bpm=params.bpm,
             density=params.density,
             brightness=params.brightness,
@@ -84,12 +84,12 @@ class LyriaManager:
         if not self._session:
             return
         try:
-            async for msg in self._session:
+            async for msg in self._session.receive():
                 if not self._running:
                     break
-                server = msg.server_content
-                if server and server.audio_chunks:
-                    for chunk in server.audio_chunks:
+                server = msg.serverContent
+                if server and server.audioChunks:
+                    for chunk in server.audioChunks:
                         if chunk.data:
                             yield chunk.data
         except Exception as e:
