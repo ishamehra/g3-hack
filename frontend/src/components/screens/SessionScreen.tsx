@@ -169,7 +169,13 @@ export default function SessionScreen({
             [] STOP
           </button>
         )}
-        <button onClick={onChangeMood} style={btnAmber}>
+        <button
+          onClick={() => {
+            handleStop();
+            onChangeMood();
+          }}
+          style={btnAmber}
+        >
           MOOD
         </button>
         <button
