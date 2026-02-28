@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { textGreen, textAmber, btnAmber, GREEN } from "@/lib/crt-styles";
+import { useRouter } from "next/navigation";
 
 interface OnboardingScreenProps {
   onContinue: () => void;
@@ -28,7 +29,17 @@ export default function OnboardingScreen({
   const [visibleLines, setVisibleLines] = useState(0);
   const [showPrompt, setShowPrompt] = useState(false);
 
+  const router = useRouter();
+
   useEffect(() => {
+    // Check if we just came back from successful OAuth
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("oura") === "success") {
+      setShowPrompt(true);
+      setVisibleLines(BOOT_LINES.length);
+      return;
+    }
+
     if (visibleLines < BOOT_LINES.length) {
       const timer = setTimeout(
         () => setVisibleLines((v) => v + 1),
@@ -40,6 +51,11 @@ export default function OnboardingScreen({
       return () => clearTimeout(timer);
     }
   }, [visibleLines]);
+
+  const handleOuraLogin = () => {
+    // Redirect to the FastAPI backend OAuth initiator
+    window.location.href = "http://localhost:8000/api/auth/oura";
+  };
 
   return (
     <div className="flex flex-col">
@@ -77,9 +93,13 @@ export default function OnboardingScreen({
       </div>
 
       {showPrompt && (
-        <div className="pt-4">
-          <button onClick={onContinue} style={btnAmber}>
-            {">"} POWER ON
+        <div className="pt-4 flex flex-col gap-4">
+          <button onClick={handleOuraLogin} style={btnAmber} className="mb-2">
+            {">"} CONNECT OURA RING
+          </button>
+
+          <button onClick={onContinue} style={btnAmber} className="opacity-70 hover:opacity-100 transition-opacity">
+            {">"} BYPASS (USE CACHED DATA)
           </button>
         </div>
       )}

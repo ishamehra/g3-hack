@@ -39,10 +39,22 @@ def set_lyria_manager(manager: Any):
 async def poll_oura() -> dict:
     """Fetch current biometrics from Oura Ring API."""
     global _oura_client
-    if _oura_client is None:
-        token = os.environ.get("OURA_TOKEN", "")
-        _oura_client = OuraClient(token)
-    bio = await _oura_client.get_current_biometrics()
+    
+    current_token = os.environ.get("OURA_TOKEN", "")
+    if not current_token:
+        logger.warning("OURA_TOKEN not set yet. Waiting for user to authenticate.")
+        return BiometricData().model_dump()
+        
+    if _oura_client is None or not hasattr(_oura_client, "_token") or _oura_client._token != current_token:
+        _oura_client = OuraClient(current_token)
+        _oura_client._token = current_token
+
+    try:
+        bio = await _oura_client.get_current_biometrics()
+    except Exception as e:
+        logger.warning("Oura poll failed: %s", e)
+        bio = BiometricData()
+        
     return bio.model_dump()
 
 
@@ -113,6 +125,7 @@ async def update_lyria(interpretation_dict: dict) -> None:
     """Push new parameters to Lyria RealTime session."""
     if _lyria_manager is None or not _lyria_manager.is_running():
         return
+    assert _lyria_manager is not None
     interp = GeminiInterpretation(**interpretation_dict)
     await _lyria_manager.update_params(interp.lyria_params, interp.prompts)
     await _lyria_manager.check_session_limit()

@@ -1,0 +1,7 @@
+{
+  "source_directories": ["."],
+  "search_path": [
+    "/Library/Frameworks/Python.framework/Versions/3.14/lib/python3.14/site-packages"
+  ],
+  "exclude": ["frontend/.*", ".venv/.*", "node_modules/.*"]
+}
