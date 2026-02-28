@@ -91,14 +91,14 @@ export default function OnboardingScreen({
       </div>
 
       {showPrompt && (
-        <div className="mt-auto pt-2 flex flex-col gap-2">
-          <button onClick={handleOuraLogin} style={btnAmber}>
+        <div className="mt-auto pt-2 flex flex-col md:flex-row gap-2">
+          <button onClick={handleOuraLogin} style={btnAmber} className="md:flex-1">
             {">"} CONNECT OURA RING
           </button>
           <button
             onClick={onContinue}
             style={btnAmber}
-            className="opacity-70 hover:opacity-100 transition-opacity"
+            className="md:flex-1 opacity-70 hover:opacity-100 transition-opacity"
           >
             {">"} CONTINUE
           </button>
