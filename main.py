@@ -161,6 +161,16 @@ async def start_session(req: StartSessionRequest):
 
     genre_list = [g.strip() for g in req.genres if g.strip()]
 
+    # 0. Stop any existing session first (prevent resource leaks)
+    if audio_task:
+        audio_task.cancel()
+        audio_task = None
+    if simple_loop:
+        simple_loop.stop()
+        simple_loop = None
+    if lyria_manager.is_running():
+        await lyria_manager.stop()
+
     # 1. Create Supabase session
     try:
         session_id = await create_session(
@@ -176,17 +186,11 @@ async def start_session(req: StartSessionRequest):
         current_session_id = session_id
 
     # 2. Start Lyria streaming (non-fatal — session works without audio)
-    lyria_ok = False
-    if not lyria_manager.is_running():
-        try:
-            await lyria_manager.start()
-            lyria_ok = True
-        except Exception as e:
-            logger.warning("Lyria start failed (session continues without audio): %s", e)
-    else:
-        lyria_ok = True
-    if lyria_ok:
+    try:
+        await lyria_manager.start()
         audio_task = asyncio.create_task(stream_lyria_audio())
+    except Exception as e:
+        logger.warning("Lyria start failed (session continues without audio): %s", e)
 
     # 3. Start biofeedback loop
     if USE_TEMPORAL:
