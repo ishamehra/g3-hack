@@ -34,7 +34,9 @@ export default function SessionScreen({
   onChangeMood,
   onHome,
 }: SessionScreenProps) {
-  const [sessionState, setSessionState] = useState<SessionState>("idle");
+  const [sessionState, setSessionState] = useState<SessionState>(
+    sessionId ? "active" : "idle"
+  );
 
   const isActive = sessionState === "active";
 
@@ -167,16 +169,16 @@ export default function SessionScreen({
             [] STOP
           </button>
         )}
-        <button
-          onClick={() => {
-            if (sessionId) handleChangeMood("calm");
-            onChangeMood();
-          }}
-          style={btnAmber}
-        >
+        <button onClick={onChangeMood} style={btnAmber}>
           MOOD
         </button>
-        <button onClick={onHome} style={{ ...btnGreen, fontSize: 8 }}>
+        <button
+          onClick={() => {
+            handleStop();
+            onHome();
+          }}
+          style={{ ...btnGreen, fontSize: 8 }}
+        >
           HOME
         </button>
       </div>

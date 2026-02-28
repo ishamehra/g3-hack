@@ -5,12 +5,14 @@ import CDDrive from "./CDDrive";
 import FrequencyDisplay from "./FrequencyDisplay";
 import VUMeter from "./VUMeter";
 import VolumeKnob from "./VolumeKnob";
+import VolumeBar from "./VolumeBar";
 import SpeakerGrille from "./SpeakerGrille";
 
 interface RadioCDPanelProps {
   appScreen: AppScreen;
   lyriaParams: LyriaParamsRow | null;
   audioConnected: boolean;
+  volume: number;
   onVolumeChange: (v: number) => void;
 }
 
@@ -18,30 +20,49 @@ export default function RadioCDPanel({
   appScreen,
   lyriaParams,
   audioConnected,
+  volume,
   onVolumeChange,
 }: RadioCDPanelProps) {
   return (
     <div
-      className="flex flex-col items-center gap-4 self-stretch justify-between"
+      className="
+        flex items-center justify-around gap-4
+        w-full py-5
+        md:flex-col md:items-center md:justify-between md:self-stretch
+        md:w-[220px] md:py-6
+      "
       style={{
-        padding: "24px 20px",
+        paddingLeft: 20,
+        paddingRight: 20,
         background: "linear-gradient(180deg, #1e1e1e, #141414, #0e0e0e)",
         borderRadius: 16,
         border: "2px solid #222",
         boxShadow:
           "inset 0 1px 2px rgba(255,255,255,0.05), 0 8px 32px rgba(0,0,0,0.6)",
-        width: 220,
       }}
     >
-      <CDDrive isPlaying={audioConnected} />
+      {/* CD Drive — hidden on mobile, shown on desktop */}
+      <div className="hidden md:block">
+        <CDDrive isPlaying={audioConnected} />
+      </div>
+
+      <VUMeter isPlaying={audioConnected} />
+
       <FrequencyDisplay
         appScreen={appScreen}
         lyriaParams={lyriaParams}
         audioConnected={audioConnected}
       />
-      <VUMeter isPlaying={audioConnected} />
-      <VolumeKnob onChange={onVolumeChange} />
-      <SpeakerGrille />
+
+      <div className="flex flex-col items-center gap-2 w-full md:w-auto">
+        <VolumeBar volume={volume} onChange={onVolumeChange} />
+        <VolumeKnob volume={volume} onChange={onVolumeChange} />
+      </div>
+
+      {/* Speaker — hidden on mobile, shown on desktop */}
+      <div className="hidden md:block">
+        <SpeakerGrille />
+      </div>
     </div>
   );
 }

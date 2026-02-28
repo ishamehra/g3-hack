@@ -32,11 +32,25 @@ class SessionInput(BaseModel):
 
 
 class BiometricData(BaseModel):
+    # Core vitals
     hr: int | None = None
     hrv: int | None = None
     stress_pct: float | None = None
     sleep_score: int | None = None
     readiness_score: int | None = None
+    # Detailed sleep (from /v2/usercollection/sleep)
+    deep_sleep_min: int | None = None
+    rem_sleep_min: int | None = None
+    sleep_efficiency: int | None = None
+    temp_delta: float | None = None
+    hr_lowest: int | None = None
+    # Daily activity (from /v2/usercollection/daily_activity)
+    steps: int | None = None
+    active_calories: int | None = None
+    # Resilience (from /v2/usercollection/daily_resilience)
+    resilience_level: str | None = None
+    # SpO2 (from /v2/usercollection/daily_spo2)
+    spo2_avg: float | None = None
 
 
 class WeatherData(BaseModel):
