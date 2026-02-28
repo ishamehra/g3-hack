@@ -32,45 +32,34 @@ export default function ScreenContent({
   audioConnected,
   ouraConnected,
 }: ScreenContentProps) {
-  const [transitioning, setTransitioning] = useState(false);
   const [activeScreen, setActiveScreen] = useState(screen);
-  const [phase, setPhase] = useState<"idle" | "exit" | "static" | "enter">("idle");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showStatic, setShowStatic] = useState(false);
+  const isFirstSwap = useRef(true);
 
   useEffect(() => {
-    if (screen !== activeScreen && phase === "idle") {
-      // Phase 1: fade out old screen
-      setPhase("exit");
-      timerRef.current = setTimeout(() => {
-        // Phase 2: static burst
-        setTransitioning(true);
-        setPhase("static");
-        timerRef.current = setTimeout(() => {
-          // Phase 3: swap screen + fade in
-          setActiveScreen(screen);
-          setTransitioning(false);
-          setPhase("enter");
-          timerRef.current = setTimeout(() => {
-            setPhase("idle");
-          }, 150);
-        }, 100);
-      }, 150);
-    }
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [screen, activeScreen, phase]);
+    if (screen === activeScreen) return;
 
-  const contentClass =
-    phase === "exit"
-      ? "screen-exit"
-      : phase === "enter"
-        ? "screen-enter"
-        : "";
+    // On first screen change (hydration state restore), swap instantly — no animation
+    if (isFirstSwap.current) {
+      isFirstSwap.current = false;
+      setActiveScreen(screen);
+      return;
+    }
+
+    // Brief CRT static burst, then swap to new screen
+    setShowStatic(true);
+    const t = setTimeout(() => {
+      setActiveScreen(screen);
+      setShowStatic(false);
+    }, 150);
+
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen]);
 
   return (
     <div className="relative w-full h-full">
-      {transitioning && (
+      {showStatic && (
         <div
           className="absolute inset-0 z-50"
           style={{
@@ -80,7 +69,13 @@ export default function ScreenContent({
           }}
         />
       )}
-      <div className={`w-full h-full ${contentClass}`}>
+      <div
+        className="w-full h-full"
+        style={{
+          opacity: showStatic ? 0 : 1,
+          transition: "opacity 100ms ease",
+        }}
+      >
         {activeScreen === "onboarding" && (
           <OnboardingScreen
             onContinue={() => onNavigate("session")}

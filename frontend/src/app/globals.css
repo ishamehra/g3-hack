@@ -606,6 +606,11 @@
   50% { opacity: 0; }
 }
 
+@keyframes phosphor-flicker {
+  0%, 100% { opacity: 0.02; }
+  50% { opacity: 0; }
+}
+
 /* ============================================
    SCREEN TRANSITION ANIMATIONS
    ============================================ */
