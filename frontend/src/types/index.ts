@@ -1,5 +1,5 @@
 // ---- App navigation ----
-export type AppScreen = "onboarding" | "biometric" | "mood" | "session" | "privacy" | "tos";
+export type AppScreen = "onboarding" | "biometric" | "mood" | "session" | "oura" | "privacy" | "tos";
 
 // ---- Lyria scale enum (matches backend) ----
 export type LyriaScale =
@@ -17,6 +17,24 @@ export type LyriaScale =
   | "B_MAJOR_A_FLAT_MINOR";
 
 export type Quadrant = "Q1" | "Q2" | "Q3" | "Q4";
+
+// ---- Biometric data from Oura (matches backend BiometricData model) ----
+export interface BiometricData {
+  hr: number | null;
+  hrv: number | null;
+  stress_pct: number | null;
+  sleep_score: number | null;
+  readiness_score: number | null;
+  deep_sleep_min: number | null;
+  rem_sleep_min: number | null;
+  sleep_efficiency: number | null;
+  temp_delta: number | null;
+  hr_lowest: number | null;
+  steps: number | null;
+  active_calories: number | null;
+  resilience_level: string | null;
+  spo2_avg: number | null;
+}
 
 // ---- This is what you receive from Supabase Realtime (lyria_params table row) ----
 export interface LyriaParamsRow {
@@ -37,26 +55,7 @@ export interface LyriaParamsRow {
     quadrant: Quadrant;
     label: string;
   };
-  biometrics: {
-    hr: number | null;
-    hrv: number | null;
-    stress_pct: number | null;
-    sleep_score: number | null;
-    readiness_score: number | null;
-    deep_sleep_min: number | null;
-    rem_sleep_min: number | null;
-    sleep_efficiency: number | null;
-    temp_delta: number | null;
-    hr_lowest: number | null;
-    steps: number | null;
-    active_calories: number | null;
-    resilience_level: string | null;
-    spo2_avg: number | null;
-    digital_stress_score: number | null;
-    motion_intensity: number | null;
-    ambient_db: number | null;
-    engagement_level: number | null;
-  };
+  biometrics: BiometricData;
   circadian_phase: string;
   cycle_phase: string | null;
   weather: { temp_f: number; condition: string; humidity?: number } | null;

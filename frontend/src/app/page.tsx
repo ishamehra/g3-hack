@@ -10,6 +10,7 @@ import { useOuraStatus } from "@/hooks/useOuraStatus";
 import CRTMonitor from "@/components/crt/CRTMonitor";
 import ScreenContent from "@/components/crt/ScreenContent";
 import RadioCDPanel from "@/components/radio/RadioCDPanel";
+import BiometricOverlay from "@/components/crt/BiometricOverlay";
 
 export default function Home() {
   const { screen, targetMood, goTo, setTargetMood } = useAppState();
@@ -94,17 +95,19 @@ export default function Home() {
   };
 
   const [showBiometrics, setShowBiometrics] = useState(false);
-  const [showOura, setShowOura] = useState(false);
   const isLegalScreen = screen === "privacy" || screen === "tos";
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center p-2 md:p-8">
-      <div className="flex flex-col md:flex-row items-center md:items-stretch gap-2 md:gap-8 w-full max-w-[860px] px-1 md:px-0">
+      <div className="flex flex-col md:flex-row items-center md:items-stretch gap-2 md:gap-6 w-full max-w-[900px] px-1 md:px-0">
         <CRTMonitor
           toggles={[
             { label: "BIO", on: showBiometrics, onToggle: () => setShowBiometrics((p) => !p) },
-            { label: "OURA", on: showOura, onToggle: () => setShowOura((p) => !p) },
+            { label: "OURA", on: screen === "oura", onToggle: () => {
+              goTo(screen === "oura" ? "session" : "oura");
+            } },
           ]}
+          overlay={showBiometrics ? <BiometricOverlay biometrics={lyriaParams?.biometrics ?? null} /> : undefined}
         >
           <ScreenContent
             screen={screen}

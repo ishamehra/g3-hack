@@ -30,7 +30,7 @@ export function useAppState() {
         const parsed = JSON.parse(raw);
         const screen = parsed.screen ?? "onboarding";
         setState({
-          screen: screen === "privacy" || screen === "tos" ? "onboarding" : screen,
+          screen: screen === "privacy" || screen === "tos" || screen === "oura" ? "onboarding" : screen,
           targetMood: parsed.targetMood ?? null,
         });
       }

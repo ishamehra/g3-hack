@@ -10,10 +10,11 @@ interface ToggleSwitch {
 
 interface CRTMonitorProps {
   children: React.ReactNode;
+  overlay?: React.ReactNode;
   toggles?: ToggleSwitch[];
 }
 
-export default function CRTMonitor({ children, toggles }: CRTMonitorProps) {
+export default function CRTMonitor({ children, overlay, toggles }: CRTMonitorProps) {
   return (
     <div
       className="relative flex flex-col w-full md:w-auto"
@@ -26,7 +27,7 @@ export default function CRTMonitor({ children, toggles }: CRTMonitorProps) {
     >
       {/* Bezel */}
       <div
-        className="relative overflow-hidden m-2 md:m-5 mb-0 md:mb-0"
+        className="relative overflow-hidden m-2 md:m-3 mb-0 md:mb-0"
         style={{
           borderRadius: 16,
           border: "3px solid #111",
@@ -36,18 +37,23 @@ export default function CRTMonitor({ children, toggles }: CRTMonitorProps) {
       >
         {/* Screen */}
         <div
-          className="relative overflow-hidden w-full md:w-[580px] aspect-[4/5] md:aspect-[4/3]"
+          className="relative overflow-hidden w-full md:w-[620px] aspect-[4/5] md:aspect-[4/3]"
           style={{ background: "#0a0a0a" }}
         >
           <CRTScreenOverlay />
-          <div className="relative z-[1] w-full h-full p-3 md:p-5 overflow-hidden md:overflow-y-auto">
+          <div className="absolute inset-0 z-[1] p-3 md:p-5 overflow-hidden md:overflow-y-auto">
             {children}
           </div>
+          {overlay && (
+            <div className="absolute inset-0 z-[2]">
+              {overlay}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Base / chin */}
-      <div className="flex items-center justify-center gap-4 md:gap-6 px-4 md:px-6 py-2 md:py-3">
+      <div className="flex items-center justify-center gap-3 md:gap-5 px-3 md:px-5 py-0.5 md:py-1">
         {/* Power LED */}
         <div
           className="w-2 h-2 rounded-full animate-pulse shrink-0"
