@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import type { AppScreen, MoodState, LyriaParamsRow } from "@/types";
 import OnboardingScreen from "@/components/screens/OnboardingScreen";
-import BiometricScreen from "@/components/screens/BiometricScreen";
 import MoodSelectorScreen from "@/components/screens/MoodSelectorScreen";
 import SessionScreen from "@/components/screens/SessionScreen";
 import LegalScreen from "@/components/screens/LegalScreen";
@@ -58,13 +57,7 @@ export default function ScreenContent({
         />
       )}
       {activeScreen === "onboarding" && (
-        <OnboardingScreen onContinue={() => onNavigate("biometric")} />
-      )}
-      {activeScreen === "biometric" && (
-        <BiometricScreen
-          onContinue={() => onNavigate("mood")}
-          onBack={() => onNavigate("onboarding")}
-        />
+        <OnboardingScreen onContinue={() => onNavigate("session")} />
       )}
       {activeScreen === "mood" && (
         <MoodSelectorScreen
@@ -72,7 +65,7 @@ export default function ScreenContent({
             onMoodSelect(mood);
             onNavigate("session");
           }}
-          onBack={() => onNavigate("biometric")}
+          onBack={() => onNavigate("onboarding")}
         />
       )}
       {activeScreen === "session" && (

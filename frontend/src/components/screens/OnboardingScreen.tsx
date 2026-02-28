@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { textGreen, textAmber, btnAmber, GREEN } from "@/lib/crt-styles";
-import { config } from "@/lib/config";
 
 interface OnboardingScreenProps {
   onContinue: () => void;
@@ -30,14 +29,6 @@ export default function OnboardingScreen({
   const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    // Check if we just came back from successful OAuth
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("oura") === "success") {
-      setShowPrompt(true);
-      setVisibleLines(BOOT_LINES.length);
-      return;
-    }
-
     if (visibleLines < BOOT_LINES.length) {
       const timer = setTimeout(
         () => setVisibleLines((v) => v + 1),
@@ -49,10 +40,6 @@ export default function OnboardingScreen({
       return () => clearTimeout(timer);
     }
   }, [visibleLines]);
-
-  const handleOuraLogin = () => {
-    window.location.href = `${config.apiUrl}/api/auth/oura`;
-  };
 
   return (
     <div className="flex flex-col h-full">
@@ -90,16 +77,9 @@ export default function OnboardingScreen({
       </div>
 
       {showPrompt && (
-        <div className="mt-auto pt-4 flex flex-col gap-3">
-          <button onClick={handleOuraLogin} style={btnAmber}>
-            {">"} CONNECT OURA RING
-          </button>
-          <button
-            onClick={onContinue}
-            style={btnAmber}
-            className="opacity-70 hover:opacity-100 transition-opacity"
-          >
-            {">"} BYPASS (USE CACHED DATA)
+        <div className="mt-auto pt-4">
+          <button onClick={onContinue} style={btnAmber}>
+            {">"} POWER ON
           </button>
         </div>
       )}

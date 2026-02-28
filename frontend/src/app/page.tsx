@@ -89,12 +89,19 @@ export default function Home() {
     goTo("session");
   };
 
+  const [showBiometrics, setShowBiometrics] = useState(false);
+  const [showOura, setShowOura] = useState(false);
   const isLegalScreen = screen === "privacy" || screen === "tos";
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center p-2 md:p-8">
       <div className="flex flex-col md:flex-row items-center md:items-stretch gap-2 md:gap-8 w-full max-w-[860px] px-1 md:px-0">
-        <CRTMonitor>
+        <CRTMonitor
+          toggles={[
+            { label: "BIO", on: showBiometrics, onToggle: () => setShowBiometrics((p) => !p) },
+            { label: "OURA", on: showOura, onToggle: () => setShowOura((p) => !p) },
+          ]}
+        >
           <ScreenContent
             screen={screen}
             onNavigate={goTo}
