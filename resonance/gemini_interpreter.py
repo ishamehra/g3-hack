@@ -134,7 +134,7 @@ async def interpret_state(state: CompositeState) -> GeminiInterpretation:
     """Call Gemini Flash to interpret biometric state into music parameters."""
     client = _get_client()
     response = await client.aio.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.0-flash-001",
         contents=_build_user_message(state),
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,

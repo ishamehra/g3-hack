@@ -87,9 +87,9 @@ class LyriaManager:
             async for msg in self._session.receive():
                 if not self._running:
                     break
-                server = msg.serverContent
-                if server and server.audioChunks:
-                    for chunk in server.audioChunks:
+                server = msg.server_content
+                if server and server.audio_chunks:
+                    for chunk in server.audio_chunks:
                         if chunk.data:
                             yield chunk.data
         except Exception as e:
