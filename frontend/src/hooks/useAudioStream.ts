@@ -26,6 +26,7 @@ export function useAudioStream(active: boolean) {
     if (!active) return;
 
     const ctx = new AudioContext({ sampleRate: 48000 });
+    ctx.resume(); // Chrome suspends AudioContext created outside click handler
     ctxRef.current = ctx;
 
     const analyserNode = ctx.createAnalyser();

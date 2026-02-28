@@ -13,6 +13,7 @@ import {
   separator,
   GREEN,
 } from "@/lib/crt-styles";
+import { isDemoMode } from "@/lib/demo";
 
 const ASCII_NUMS: Record<number, string[]> = {
   3: [" ██████╗ ", "╚════██║", " █████╔╝", "╚════██║", " ██████╔╝", " ╚═════╝ "],
@@ -127,6 +128,16 @@ export default function SessionScreen({
 
   const handleStart = async () => {
     setSessionState("connecting");
+
+    if (isDemoMode()) {
+      // Skip backend — instantly start with fake session ID
+      setTimeout(() => {
+        onSessionStart("demo-session-001");
+        setSessionState("active");
+      }, 400);
+      return;
+    }
+
     try {
       const res = await fetch(`${config.apiUrl}/api/session/start`, {
         method: "POST",
@@ -146,16 +157,17 @@ export default function SessionScreen({
 
   const handleStop = async () => {
     setFadingOut(true);
-    try {
-      await fetch(`${config.apiUrl}/api/session/stop`, { method: "POST" });
-    } catch {
-      // ignore stop errors
+    if (!isDemoMode()) {
+      try {
+        await fetch(`${config.apiUrl}/api/session/stop`, { method: "POST" });
+      } catch {
+        // ignore stop errors
+      }
     }
-    setTimeout(() => {
-      onSessionEnd();
-      setSessionState("idle");
-      setFadingOut(false);
-    }, 300);
+    // Clear session immediately to prevent stale session_id race conditions
+    onSessionEnd();
+    setSessionState("idle");
+    setFadingOut(false);
   };
 
   const bio = lyriaParams?.biometrics;

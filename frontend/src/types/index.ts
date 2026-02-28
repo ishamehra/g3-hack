@@ -34,6 +34,10 @@ export interface BiometricData {
   active_calories: number | null;
   resilience_level: string | null;
   spo2_avg: number | null;
+  digital_stress_score: number | null;
+  motion_intensity: number | null;
+  ambient_db: number | null;
+  engagement_level: number | null;
 }
 
 // ---- This is what you receive from Supabase Realtime (lyria_params table row) ----

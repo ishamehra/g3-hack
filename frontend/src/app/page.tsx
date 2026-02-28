@@ -7,20 +7,36 @@ import { useLyriaParams } from "@/hooks/useLyriaParams";
 import { useAudioStream } from "@/hooks/useAudioStream";
 import { useBassReactivity } from "@/hooks/useBassReactivity";
 import { useOuraStatus } from "@/hooks/useOuraStatus";
+import { isDemoMode } from "@/lib/demo";
+import { useDemoTimeline } from "@/hooks/useDemoTimeline";
+import { useDemoAutoPilot } from "@/hooks/useDemoAutoPilot";
 import CRTMonitor from "@/components/crt/CRTMonitor";
 import ScreenContent from "@/components/crt/ScreenContent";
 import RadioCDPanel from "@/components/radio/RadioCDPanel";
 import BiometricOverlay from "@/components/crt/BiometricOverlay";
 
 export default function Home() {
+  const demoMode = isDemoMode();
   const { screen, targetMood, goTo, setTargetMood } = useAppState();
   // Start with defaults to match SSR — restore in useEffect
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [volume, setVolumeState] = useState(0.7);
-  const lyriaParams = useLyriaParams(sessionId);
+
+  // Demo vs. real data sources
+  const realLyriaParams = useLyriaParams(demoMode ? null : sessionId);
+  const demoLyriaParams = useDemoTimeline(demoMode && !!sessionId);
+  const lyriaParams = demoMode ? demoLyriaParams : realLyriaParams;
+
+  // Audio always uses real stream (Lyria backend)
   const { connected: audioConnected, setVolume: setAudioVolume, analyser } = useAudioStream(!!sessionId);
   const bassIntensity = useBassReactivity(analyser);
-  const { isConnected: ouraConnected } = useOuraStatus();
+
+  // In demo mode, Oura is always "connected"
+  const { isConnected: realOuraConnected } = useOuraStatus();
+  const ouraConnected = demoMode ? true : realOuraConnected;
+
+  // Auto-pilot for demo recording (mood switch at t=14s)
+  useDemoAutoPilot({ active: demoMode, sessionId, goTo, setTargetMood });
 
   // Restore persisted state after hydration
   useEffect(() => {
