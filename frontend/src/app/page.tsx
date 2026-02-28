@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MoodState } from "@/types";
 import { useAppState } from "@/hooks/useAppState";
 import { useLyriaParams } from "@/hooks/useLyriaParams";
@@ -37,6 +37,24 @@ export default function Home() {
 
   // Auto-pilot for demo recording (mood switch at t=14s)
   useDemoAutoPilot({ active: demoMode, sessionId, goTo, setTargetMood });
+
+  // Synthetic bass pulsing for demo mode (drives speaker + panel animations)
+  const [demoBass, setDemoBass] = useState(0);
+  const demoBassRaf = useRef(0);
+  useEffect(() => {
+    if (!demoMode || !sessionId) { setDemoBass(0); return; }
+    const bpm = lyriaParams?.bpm ?? 72;
+    const beatMs = 60000 / bpm;
+    const tick = () => {
+      const beatPos = (Date.now() % beatMs) / beatMs;
+      const envelope = beatPos < 0.1 ? beatPos / 0.1 : Math.exp(-(beatPos - 0.1) * 3);
+      setDemoBass(envelope * 0.6);
+      demoBassRaf.current = requestAnimationFrame(tick);
+    };
+    demoBassRaf.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(demoBassRaf.current);
+  }, [demoMode, sessionId, lyriaParams?.bpm]);
+  const effectiveBass = demoMode ? demoBass : bassIntensity;
 
   // Restore persisted state after hydration
   useEffect(() => {
@@ -145,7 +163,7 @@ export default function Home() {
           audioConnected={audioConnected}
           volume={volume}
           onVolumeChange={handleVolumeChange}
-          bassIntensity={bassIntensity}
+          bassIntensity={effectiveBass}
           analyser={analyser}
         />
       </div>
