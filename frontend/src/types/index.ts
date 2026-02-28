@@ -1,3 +1,7 @@
+// ---- App navigation ----
+
+export type AppScreen = "onboarding" | "biometric" | "mood" | "session";
+
 // ---- Biometric types ----
 
 export interface BiometricSnapshot {
