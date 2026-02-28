@@ -15,7 +15,7 @@ from pydantic import BaseModel
 import httpx
 
 from resonance.lyria_manager import LyriaManager
-from resonance.models import SessionInput
+from resonance.models import SessionInput, BrowserSignals
 from resonance.supabase_client import create_session, get_supabase, insert_signal
 
 load_dotenv()
@@ -172,6 +172,10 @@ class SignalIngestRequest(BaseModel):
     metadata: dict | None = None
 
 
+# Global storage for browser signals
+_browser_signals: dict = {}
+
+
 # ── REST endpoints ───────────────────────────────────────────────────
 
 
@@ -297,6 +301,18 @@ async def ingest_signal(req: SignalIngestRequest):
     return {"status": "ingested"}
 
 
+@app.post("/api/signals/browser")
+async def ingest_browser_signals(signals: BrowserSignals):
+    global _browser_signals
+    _browser_signals = signals.model_dump()
+    if simple_loop:
+        simple_loop.set_browser_signals(signals.model_dump())
+    logger.info("Browser signals: stress=%.2f, ambient_db=%s",
+                signals.digital_stress.get("typing_cps", 0),
+                signals.ambient.get("db", "N/A"))
+    return {"status": "ok"}
+
+
 @app.get("/api/session/state")
 async def get_state():
     if USE_TEMPORAL and workflow_handle:
@@ -336,11 +352,12 @@ async def oura_auth_callback(code: str, state: str | None = None):
             "client_secret": OURA_CLIENT_SECRET
         })
         data = resp.json()
+        frontend_url = os.environ.get("FRONTEND_URL", "https://resonance-gemini.vercel.app")
         if "access_token" in data:
             os.environ["OURA_TOKEN"] = data["access_token"]
             logger.info("Successfully obtained Oura Access Token via OAuth")
-            return {"status": "success", "message": "Oura connected! You can close this window."}
-        return {"error": "Failed to exchange token", "details": data}
+            return RedirectResponse(f"{frontend_url}?oura=success")
+        return RedirectResponse(f"{frontend_url}?oura=error")
 
 
 @app.post("/api/webhooks/oura")

@@ -35,6 +35,7 @@ export default function OnboardingScreen({
     if (urlParams.get("oura") === "success") {
       setShowPrompt(true);
       setVisibleLines(BOOT_LINES.length);
+      window.history.replaceState({}, '', window.location.pathname);
       return;
     }
 
@@ -65,10 +66,10 @@ export default function OnboardingScreen({
           return (
             <div
               key={i}
-              className={`text-lg ${isTitle ? "mb-1" : ""} ${isNominal ? "font-bold" : ""}`}
+              className={`text-base ${isTitle ? "mb-1" : ""} ${isNominal ? "font-bold" : ""}`}
               style={
                 isTitle || isSeparator
-                  ? { ...textAmber, fontSize: isTitle ? 18 : 14 }
+                  ? { ...textAmber, fontSize: isTitle ? 16 : 13 }
                   : textGreen
               }
             >
@@ -90,7 +91,7 @@ export default function OnboardingScreen({
       </div>
 
       {showPrompt && (
-        <div className="mt-auto pt-4 flex flex-col gap-3">
+        <div className="mt-auto pt-2 flex flex-col gap-2">
           <button onClick={handleOuraLogin} style={btnAmber}>
             {">"} CONNECT OURA RING
           </button>
