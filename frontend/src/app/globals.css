@@ -581,11 +581,6 @@
   100% { opacity: 0.01; }
 }
 
-@keyframes phosphor-flicker {
-  0%, 100% { opacity: 0.98; }
-  50% { opacity: 1; }
-}
-
 @keyframes static-noise {
   0% { background-position: 0 0; }
   25% { background-position: 2px 1px; }
@@ -609,4 +604,49 @@
 @keyframes cursor-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
+}
+
+/* ============================================
+   SCREEN TRANSITION ANIMATIONS
+   ============================================ */
+
+@keyframes screen-fade-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes screen-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes glow-pulse {
+  0%   { text-shadow: 0 0 6px rgba(51,255,51,0.4); }
+  50%  { text-shadow: 0 0 16px rgba(51,255,51,0.9), 0 0 30px rgba(51,255,51,0.4); }
+  100% { text-shadow: 0 0 6px rgba(51,255,51,0.4); }
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+.screen-enter {
+  animation: screen-fade-in 150ms ease-out forwards;
+}
+
+.screen-exit {
+  animation: screen-fade-out 150ms ease-in forwards;
+}
+
+.glow-once {
+  animation: glow-pulse 400ms ease-in-out 1;
+}
+
+.status-pulsing {
+  animation: status-pulse 0.8s ease-in-out infinite;
+}
+
+.session-fade-out {
+  animation: screen-fade-out 300ms ease-in forwards;
 }

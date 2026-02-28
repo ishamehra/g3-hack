@@ -15,7 +15,7 @@ from pydantic import BaseModel
 import httpx
 
 from resonance.lyria_manager import LyriaManager
-from resonance.models import SessionInput, BrowserSignals
+from resonance.models import SessionInput
 from resonance.supabase_client import create_session, get_supabase, insert_signal
 
 load_dotenv()
@@ -172,10 +172,6 @@ class SignalIngestRequest(BaseModel):
     metadata: dict | None = None
 
 
-# Global storage for browser signals
-_browser_signals: dict = {}
-
-
 # ── REST endpoints ───────────────────────────────────────────────────
 
 
@@ -301,18 +297,6 @@ async def ingest_signal(req: SignalIngestRequest):
     return {"status": "ingested"}
 
 
-@app.post("/api/signals/browser")
-async def ingest_browser_signals(signals: BrowserSignals):
-    global _browser_signals
-    _browser_signals = signals.model_dump()
-    if simple_loop:
-        simple_loop.set_browser_signals(signals.model_dump())
-    logger.info("Browser signals: stress=%.2f, ambient_db=%s",
-                signals.digital_stress.get("typing_cps", 0),
-                signals.ambient.get("db", "N/A"))
-    return {"status": "ok"}
-
-
 @app.get("/api/session/state")
 async def get_state():
     if USE_TEMPORAL and workflow_handle:
@@ -377,6 +361,12 @@ async def oura_webhook(request: Request):
         logger.error(f"Webhook processing error: {e}")
         return {"status": "error"}
 
+
+
+@app.get("/api/auth/oura/status")
+def oura_status():
+    """Return whether Oura is connected (token exists)."""
+    return {"connected": bool(os.environ.get("OURA_TOKEN"))}
 
 
 @app.post("/api/mood")
