@@ -31,7 +31,7 @@ export default function FrequencyDisplay({
 
   return (
     <div
-      className="w-full text-center text-sm tracking-[2px]"
+      className="flex-1 md:flex-none w-full text-center text-sm tracking-[2px]"
       style={{
         padding: "8px 12px",
         fontFamily: "var(--font-vt323)",

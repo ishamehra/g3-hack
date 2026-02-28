@@ -22,26 +22,40 @@ export default function RadioCDPanel({
 }: RadioCDPanelProps) {
   return (
     <div
-      className="flex flex-col items-center gap-4 self-stretch justify-between"
+      className="
+        flex items-center justify-between gap-4
+        w-full
+        md:flex-col md:items-center md:justify-between md:self-stretch
+        md:w-[220px]
+      "
       style={{
-        padding: "24px 20px",
+        padding: "16px 20px",
         background: "linear-gradient(180deg, #1e1e1e, #141414, #0e0e0e)",
         borderRadius: 16,
         border: "2px solid #222",
         boxShadow:
           "inset 0 1px 2px rgba(255,255,255,0.05), 0 8px 32px rgba(0,0,0,0.6)",
-        width: 220,
       }}
     >
-      <CDDrive isPlaying={audioConnected} />
+      {/* CD Drive — hidden on mobile, shown on desktop */}
+      <div className="hidden md:block">
+        <CDDrive isPlaying={audioConnected} />
+      </div>
+
+      <VUMeter isPlaying={audioConnected} />
+
       <FrequencyDisplay
         appScreen={appScreen}
         lyriaParams={lyriaParams}
         audioConnected={audioConnected}
       />
-      <VUMeter isPlaying={audioConnected} />
+
       <VolumeKnob onChange={onVolumeChange} />
-      <SpeakerGrille />
+
+      {/* Speaker — hidden on mobile, shown on desktop */}
+      <div className="hidden md:block">
+        <SpeakerGrille />
+      </div>
     </div>
   );
 }

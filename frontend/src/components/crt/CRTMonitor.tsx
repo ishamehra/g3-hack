@@ -30,11 +30,10 @@ export default function CRTMonitor({ children }: CRTMonitorProps) {
       >
         {/* Screen */}
         <div
-          className="relative overflow-hidden"
+          className="relative overflow-hidden w-full md:w-[580px]"
           style={{
             background: "#0a0a0a",
             aspectRatio: "4 / 3",
-            width: 580,
           }}
         >
           <CRTScreenOverlay />
