@@ -1,20 +1,30 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 
 interface VolumeKnobProps {
+  volume: number; // 0-1
   onChange: (volume: number) => void;
-  initialVolume?: number;
 }
 
-export default function VolumeKnob({
-  onChange,
-  initialVolume = 0.7,
-}: VolumeKnobProps) {
-  const [rotation, setRotation] = useState(initialVolume * 270 - 135);
+export default function VolumeKnob({ volume, onChange }: VolumeKnobProps) {
+  const rotation = volume * 270 - 135;
   const isDragging = useRef(false);
   const startY = useRef(0);
   const startRotation = useRef(0);
+
+  const applyDelta = useCallback(
+    (clientY: number) => {
+      if (!isDragging.current) return;
+      const delta = startY.current - clientY;
+      const newRotation = Math.max(
+        -135,
+        Math.min(135, startRotation.current + delta * 1.5)
+      );
+      onChange((newRotation + 135) / 270);
+    },
+    [onChange]
+  );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -22,18 +32,7 @@ export default function VolumeKnob({
       startY.current = e.clientY;
       startRotation.current = rotation;
 
-      const handleMouseMove = (e: MouseEvent) => {
-        if (!isDragging.current) return;
-        const delta = startY.current - e.clientY;
-        const newRotation = Math.max(
-          -135,
-          Math.min(135, startRotation.current + delta * 1.5)
-        );
-        setRotation(newRotation);
-        const volume = (newRotation + 135) / 270;
-        onChange(volume);
-      };
-
+      const handleMouseMove = (e: MouseEvent) => applyDelta(e.clientY);
       const handleMouseUp = () => {
         isDragging.current = false;
         window.removeEventListener("mousemove", handleMouseMove);
@@ -43,7 +42,29 @@ export default function VolumeKnob({
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
     },
-    [rotation, onChange]
+    [rotation, applyDelta]
+  );
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      isDragging.current = true;
+      startY.current = e.touches[0].clientY;
+      startRotation.current = rotation;
+
+      const handleTouchMove = (e: TouchEvent) => {
+        e.preventDefault();
+        applyDelta(e.touches[0].clientY);
+      };
+      const handleTouchEnd = () => {
+        isDragging.current = false;
+        window.removeEventListener("touchmove", handleTouchMove);
+        window.removeEventListener("touchend", handleTouchEnd);
+      };
+
+      window.addEventListener("touchmove", handleTouchMove, { passive: false });
+      window.addEventListener("touchend", handleTouchEnd);
+    },
+    [rotation, applyDelta]
   );
 
   return (
@@ -62,6 +83,7 @@ export default function VolumeKnob({
           transform: `rotate(${rotation}deg)`,
         }}
         onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
       >
         {/* Indicator tick */}
         <div

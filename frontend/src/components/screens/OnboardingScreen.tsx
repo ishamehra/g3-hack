@@ -42,7 +42,7 @@ export default function OnboardingScreen({
   }, [visibleLines]);
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-full">
       <div>
         {BOOT_LINES.slice(0, visibleLines).map((line, i) => {
           const isTitle = i === 0;
@@ -77,7 +77,7 @@ export default function OnboardingScreen({
       </div>
 
       {showPrompt && (
-        <div className="pt-4">
+        <div className="mt-auto pt-4">
           <button onClick={onContinue} style={btnAmber}>
             {">"} POWER ON
           </button>

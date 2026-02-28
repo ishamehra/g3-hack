@@ -30,12 +30,22 @@ export function useAudioStream(active: boolean) {
     ws.onclose = () => setConnected(false);
 
     ws.onmessage = async (event) => {
-      const msg = JSON.parse(event.data);
-      if (msg.type !== "audio") return;
+      let bytes: Uint8Array;
 
-      const raw = atob(msg.audio);
-      const bytes = new Uint8Array(raw.length);
-      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      if (event.data instanceof Blob) {
+        // Binary frame — raw PCM bytes
+        bytes = new Uint8Array(await event.data.arrayBuffer());
+      } else if (typeof event.data === "string") {
+        // JSON text frame with base64 audio
+        let msg: { type?: string; audio?: string };
+        try { msg = JSON.parse(event.data); } catch { return; }
+        if (msg.type !== "audio" || !msg.audio) return;
+        const raw = atob(msg.audio);
+        bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      } else {
+        return;
+      }
 
       // 16-bit PCM stereo @ 48kHz
       const samples = bytes.length / 2;
